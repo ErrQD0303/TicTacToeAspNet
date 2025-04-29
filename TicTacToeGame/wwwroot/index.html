@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Caro (10x10) - Canvas</title>
+    <style>
+      canvas {
+        border: 2px solid #333;
+        display: block;
+        margin: 20px auto;
+        background: #fafafa;
+        cursor: pointer;
+      }
+      body {
+        text-align: center;
+        font-family: Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Caro (10x10)</h1>
+    <canvas id="gameCanvas" width="500" height="500"></canvas>
+    <p id="status"></p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+      (async () => {
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const size = 10; // 10x10 grid
+        const cellSize = canvas.width / size;
+
+        let board = Array(size)
+          .fill()
+          .map(() => Array(size).fill(""));
+        // let currentPlayer = "X";
+        let currentPlayer;
+        let gameOver = false;
+
+        let hoverCell = { row: -1, col: -1 };
+
+        function drawBoard() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.lineWidth = 1.5;
+
+          // Draw grid lines
+          ctx.strokeStyle = "#333";
+          for (let i = 0; i <= size; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * cellSize, 0);
+            ctx.lineTo(i * cellSize, canvas.height);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, i * cellSize);
+            ctx.lineTo(canvas.width, i * cellSize);
+            ctx.stroke();
+          }
+
+          // Highlight hovered cell
+          if (
+            hoverCell.row >= 0 &&
+            hoverCell.col >= 0 &&
+            !board[hoverCell.row][hoverCell.col]
+          ) {
+            ctx.fillStyle = "rgba(100, 149, 237, 0.3)";
+            // Draw a rectangle from the top left point with cellSize wid and cellSize height
+            ctx.fillRect(
+              hoverCell.col * cellSize,
+              hoverCell.row * cellSize,
+              cellSize,
+              cellSize
+            );
+          }
+
+          // Draw X and O
+          for (let row = 0; row < size; row++) {
+            for (let col = 0; col < size; col++) {
+              const mark = board[row][col];
+              if (mark) {
+                drawMark(mark, col, row);
+              }
+            }
+          }
+        }
+
+        function drawMark(mark, col, row) {
+          ctx.save();
+          ctx.font = `${cellSize * 0.6}px Arial`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = mark === "X" ? "#ff3333" : "#3333ff";
+          ctx.fillText(
+            mark,
+            col * cellSize + cellSize / 2,
+            row * cellSize + cellSize / 2
+          );
+          ctx.restore();
+        }
+
+        // Animation when placing a move
+        function animateMark(mark, col, row) {
+          let scale = 0;
+          const targetScale = 1;
+          const centerX = col * cellSize + cellSize / 2;
+          const centerY = row * cellSize + cellSize / 2;
+          const maxFontSize = cellSize * 0.6;
+
+          function animate() {
+            ctx.save(); // Save the current state
+            drawBoard(); // RedrawBoard();
+            ctx.translate(centerX, centerY); // Move the 0-0 point to the center of the mark cell
+            ctx.scale(scale, scale);
+            ctx.font = `${maxFontSize}px Arial`; // Set font size
+            ctx.textAlign = "center"; // center horizontally
+            ctx.textBaseline = "middle"; // center vertically
+            ctx.fillStyle = mark === "X" ? "#ff3333" : "#3333ff"; // set color
+            ctx.fillText(mark, 0, 0); // Draw the mark at the new 0-0 point
+            ctx.restore(); // Restore the state to the original, removing the translation
+
+            scale += 0.1; // Increase scale
+            if (scale <= targetScale) {
+              requestAnimationFrame(animate); // Continue animation
+              // This will simulate the animation of the mark growing from nothing to full size (1.0)
+            }
+          }
+          animate();
+        }
+
+        function checkWinnerFromLastMove(row, column) {
+          const needed = 5; // 5 in a row to win
+          const player = board[row][column];
+
+          if (!player) {
+            return null; // No player placed here, can't win
+          }
+
+          // Directions to check: [deltaRow, deltaColumn]
+          const directions = [
+            [0, 1], // horizontal →
+            [1, 0], // vertical ↓
+            [1, 1], // diagonal ↘
+            [1, -1], // diagonal ↙
+          ];
+
+          function countInDirection(deltaRow, deltaColumn) {
+            let count = 1; // Start with the current piece
+
+            // Check forward (positive direction)
+            let r = row + deltaRow;
+            let c = column + deltaColumn;
+            // Check if the next cell is within bounds and matches the player, if so, increase the count and move to the next cell, and so on until it doesn't match or is out of bounds
+            while (
+              r >= 0 &&
+              r < size &&
+              c >= 0 &&
+              c < size &&
+              board[r][c] === player
+            ) {
+              // If it matches, increase the count and move to the next cell
+              count++;
+              r += deltaRow;
+              c += deltaColumn;
+            }
+
+            // Check backward (negative direction)
+            r = row - deltaRow;
+            c = column - deltaColumn;
+            // Check if the next cell is within bounds and matches the player, if so, increase the count and move to the next cell, and so on until it doesn't match or is out of bounds
+            while (
+              r >= 0 &&
+              r < size &&
+              c >= 0 &&
+              c < size &&
+              board[r][c] === player
+            ) {
+              count++;
+              r -= deltaRow;
+              c -= deltaColumn;
+            }
+
+            return count;
+          }
+
+          for (const [deltaRow, deltaColumn] of directions) {
+            if (countInDirection(deltaRow, deltaColumn) >= needed) {
+              return player; // Winner found
+            }
+          }
+
+          // No winner found
+          return null;
+        }
+
+        function checkWinner() {
+          const needed = 5; // 5 in a row to win
+
+          // deltaRow: How much you move vertically each step
+          // deltaColumn: How much you move horizontally each step
+          function checkDirection(row, column, deltaRow, deltaColumn) {
+            let count = 0;
+            let player = board[row][column];
+            for (let i = 0; i < needed; i++) {
+              const newRow = row + deltaRow * i;
+              const newColumn = column + deltaColumn * i;
+              // Check for invalid indices and if the cell already checked by another player or is empty
+              if (
+                newRow < 0 ||
+                newColumn < 0 ||
+                newRow >= size ||
+                newColumn >= size ||
+                board[newRow][newColumn] !== player
+              ) {
+                return false;
+              }
+            }
+            return true;
+          }
+
+          for (let row = 0; row < size; row++) {
+            for (let column = 0; column < size; column++) {
+              if (board[row][column]) {
+                if (
+                  checkDirection(row, column, 1, 0) || // vertical down
+                  checkDirection(row, column, 0, 1) || // horizontal right
+                  checkDirection(row, column, 1, 1) || // diagonal down-right
+                  checkDirection(row, column, 1, -1) // diagonal down-left
+                ) {
+                  return board[row][column]; // return the winner
+                }
+              }
+            }
+          }
+
+          // Flat the board to an array and check if all cells are filled
+          if (board.flat().every((cell) => cell)) {
+            return "draw";
+          }
+
+          return null;
+        }
+
+        function handleMouseMove(event) {
+          if (!currentPlayer) {
+            return;
+          }
+          const rect = canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+
+          hoverCell.col = Math.floor(x / cellSize);
+          hoverCell.row = Math.floor(y / cellSize);
+        }
+
+        canvas.addEventListener("click", handleClick);
+        canvas.addEventListener("mousemove", handleMouseMove);
+
+        function gameLoop() {
+          drawBoard();
+          requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+
+        const connection = new signalR.HubConnectionBuilder()
+          .withUrl("/gamehub") // <-- update this if local or hosted
+          .build();
+
+        try {
+          await connection.start();
+        } catch (err) {
+          console.error(err);
+        }
+
+        try {
+          currentPlayer = await connection.invoke("GetMark"); // Get your current mark from the server
+        } catch (err) {
+          console.error(err.toString());
+        }
+
+        async function sendMove(row, col, player) {
+          try {
+            await connection.invoke("SendMove", row, col, player);
+            return true; // Move sent successfully
+          } catch (err) {
+            console.error(err.toString());
+            return false; // Move failed
+          }
+        }
+
+        // Listen to moves from other players
+        connection.on("ReceiveMove", (row, col, player) => {
+          if (!board[row][col] && !gameOver) {
+            board[row][col] = player;
+            //currentPlayer = player === "X" ? "O" : "X";
+            animateMark(player, col, row);
+            const winner = checkWinnerFromLastMove(row, col);
+            if (winner) {
+              gameOver = true;
+              document.getElementById("status").textContent =
+                winner === "draw" ? "It's a draw!" : `${winner} wins!`;
+            }
+          }
+        });
+
+        async function handleClick(event) {
+          if (!currentPlayer || gameOver) return;
+
+          const rect = canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+
+          const col = Math.floor(x / cellSize);
+          const row = Math.floor(y / cellSize);
+
+          if (!board[row][col]) {
+            // send move to server!
+            if (!(await sendMove(row + "", col + "", currentPlayer))) {
+              return; // Move failed, do not proceed
+            }
+
+            board[row][col] = currentPlayer;
+            animateMark(currentPlayer, col, row); // animate the growing mark
+
+            const winner = checkWinnerFromLastMove(row, col); // check for winner (draw or win)
+            if (winner) {
+              gameOver = true; // stop the game
+              document.getElementById("status").textContent =
+                winner === "draw" ? "It's a draw!" : `${winner} wins!`;
+            }
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>
