@@ -264,7 +264,11 @@
         gameLoop();
 
         const connection = new signalR.HubConnectionBuilder()
-          .withUrl("/gamehub") // <-- update this if local or hosted
+          .withUrl("/hub/gamehub", {
+            accessTokenFactory: () => {
+              return localStorage.getItem("access_token"); // <-- update this if local or hosted
+            },
+          }) // <-- update this if local or hosted
           .build();
 
         try {
