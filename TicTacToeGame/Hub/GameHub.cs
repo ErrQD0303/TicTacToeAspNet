@@ -38,6 +38,7 @@ public class GameHub : Hub<IGameHubClient>
             throw new HubException("User not found.");
         }
         user.Name = string.Empty;
+        await Clients.All.DisplayOnlineUsers(await Users.GetAllValidUsers(), $"User {user.Name} disconnected");
     }
 
     public async Task SetName(string name)
@@ -57,6 +58,7 @@ public class GameHub : Hub<IGameHubClient>
         }
         currentUser.Name = name;
         await Clients.Caller.ReceiveSetNameSuccess(currentUser.Id, currentUser.Name);
+        await Clients.All.DisplayOnlineUsers(await Users.GetAllValidUsers(), $"User {currentUser.Name} connected");
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -78,6 +80,7 @@ public class GameHub : Hub<IGameHubClient>
             Logger.LogInformation("User {0} and {1} exited match {MatchId}", match.Player1Id, match.Player2Id, match.Id);
             await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveExitMatch(match.Player1Id, $"Player {user.Name} exited the match");
         }
+        await Clients.All.DisplayOnlineUsers(await Users.GetAllValidUsers(), $"User {user.Name} disconnected");
     }
 
     public async Task FindGame(int row, int column)

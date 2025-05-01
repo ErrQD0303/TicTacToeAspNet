@@ -12,6 +12,12 @@ public class SimpleUserService : ISimpleUserService
         return Task.FromResult(Users.FirstOrDefault(u => u.Name == name) ?? null);
     }
 
+    public Task<List<SimpleUser>> GetAllValidUsers()
+    {
+        var validUsers = Users.Where(u => u != null && !string.IsNullOrEmpty(u.Name)).ToList();
+        return Task.FromResult(validUsers);
+    }
+
     public Task<SimpleUser?> GetUserByIdAsync(string id)
     {
         var user = Users.FirstOrDefault(u => u.Id == id) ?? null;

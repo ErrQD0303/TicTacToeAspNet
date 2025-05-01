@@ -1,3 +1,5 @@
+using TicTacToeGame.Models;
+
 namespace TicTacToeGame.Hub;
 
 public interface IGameHubClient
@@ -8,4 +10,5 @@ public interface IGameHubClient
     Task ReceiveMatchRestart(string newGameId, string message, int row, int column);
     Task ReceiveUserAlreadyInAMatch(string gameId, string opponent);
     Task ReceiveSetNameSuccess(string id, string name);
+    Task DisplayOnlineUsers(List<SimpleUser> users, string message);
 }

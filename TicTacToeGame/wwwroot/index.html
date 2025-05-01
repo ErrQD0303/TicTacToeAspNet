@@ -156,6 +156,106 @@
         margin-left: 10px;
       }
 
+      #online-users-section {
+        margin-top: 20px;
+      } /* Online Users Sidebar */
+
+      #online-users-toggle {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1100;
+        background-color: #3b82f6;
+        color: white;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 20px;
+        cursor: pointer;
+      }
+
+      #online-users-sidebar {
+        position: fixed;
+        top: 0;
+        right: -100vw; /* Hidden by default */
+        height: 100vh;
+        width: 250px;
+        background-color: #e0f2fe;
+        border-left: 2px solid #93c5fd;
+        padding: 20px;
+        box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+        transition: right 0.3s ease;
+        z-index: 1000;
+      }
+
+      #online-users-sidebar.open {
+        right: 0;
+      }
+
+      /* Remove the online users section from the left sidebar */
+      #online-users-section {
+        display: none;
+      }
+
+      /* Online Users List Styles */
+      .online-users-list {
+        margin-top: 15px;
+        text-align: left; /* Align names to the left */
+      }
+
+      .online-users-list > div {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 14px;
+        border-bottom: 1px solid #dbeafe;
+      }
+
+      .online-users-list > div:last-child {
+        border-bottom: none;
+      }
+
+      /* Green circle before each name */
+      .online-users-list > div::before {
+        content: "";
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background-color: #22c55e; /* green color */
+        border-radius: 50%;
+        margin-right: 10px;
+        flex-shrink: 0; /* Prevent the circle from shrinking */
+      }
+
+      /* Add some padding to the right sidebar */
+      #online-users-sidebar {
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      /* Add hover effect to user items */
+      .online-users-list > div:hover {
+        background-color: #dbeafe;
+        border-radius: 4px;
+        padding-left: 8px;
+        margin-left: -8px;
+        cursor: default;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 600px) {
+        #online-users-toggle {
+          padding: 14px 20px;
+          font-size: 24px;
+        }
+
+        #online-users-sidebar {
+          width: 90vw;
+          font-size: 16px;
+          padding: 15px;
+        }
+      }
+
       /* Larger button on mobile */
       @media (max-width: 600px) {
         #sidebar-toggle {
@@ -213,6 +313,15 @@
       <button id="btn-logout">Logout</button>
     </div>
 
+    <!-- Add this new button for the online users sidebar -->
+    <button id="online-users-toggle" style="display: none">👥</button>
+
+    <!-- Add this new right sidebar for online users -->
+    <div id="online-users-sidebar">
+      <h3>Online Users</h3>
+      <div id="online-users" class="online-users-list"></div>
+    </div>
+
     <h1 id="app-header">Caro (10x10)</h1>
     <div>
       <canvas id="gameCanvas"></canvas>
@@ -225,11 +334,22 @@
         // Update this to your backend URL, in reality you will first deploy the backend, then you will need to update this URL to the backend URL, and then deploy the frontend, so that it can access the backend.
         // const backendUrl =
         //   "tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net";
-        // const backendUrl =
-        "https://tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net"; // Localhost URL for development
+        const backendUrl =
+          "https://tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net"; // Localhost URL for development
         // const backendUrl = "https://localhost:7194"; // Localhost URL for development
         let currentUser = null;
         let token = null; // Store the token here
+
+        // Add this near your other toggle functionality
+        document
+          .getElementById("online-users-toggle")
+          .addEventListener("click", toggleOnlineUsersSidebar);
+
+        function toggleOnlineUsersSidebar() {
+          document
+            .getElementById("online-users-sidebar")
+            .classList.toggle("open");
+        }
 
         document
           .getElementById("sidebar-toggle")
@@ -243,20 +363,20 @@
 
         async function login() {
           const username = document.getElementById("login-username").value;
-
-          if (username) {
-            try {
-              const connection = await getSignalRConnection();
-              if (!connection) {
-                alert("Failed to connect to the server. Please try again.");
-                return;
-              }
-              await connection.invoke("SetName", username); // Send login request to server
-            } catch (error) {
-              console.error("Error during login:", error);
-              alert("Login failed. Please try again.");
+          if (!username) {
+            return;
+          }
+          try {
+            const connection = await getSignalRConnection();
+            if (!connection) {
+              alert("Failed to connect to the server. Please try again.");
               return;
             }
+            await connection.invoke("SetName", username); // Send login request to server
+          } catch (error) {
+            console.error("Error during login:", error);
+            alert("Login failed. Please try again.");
+            return;
           }
 
           token = true;
@@ -323,6 +443,9 @@
           const welcomeMessage = document.getElementById("welcome-message");
           const userSidebar = document.getElementById("user-sidebar");
           const toggleBtn = document.getElementById("sidebar-toggle");
+          const onlineUsersToggle = document.getElementById(
+            "online-users-toggle"
+          );
 
           if (token) {
             authContainer.style.display = "none";
@@ -330,11 +453,16 @@
             welcomeMessage.textContent = `Welcome, ${currentUser.name}`;
             toggleBtn.style.display = "block"; // Show the toggle button
             userSidebar.style.display = "flex"; // Show the sidebar
+            onlineUsersToggle.style.display = "block";
           } else {
             authContainer.style.display = "block";
             loginForm.style.display = "block";
+            onlineUsersToggle.style.display = "none";
             toggleBtn.style.display = "none"; // Hide the toggle button
             userSidebar.style.display = "none"; // Hide the sidebar
+            document
+              .getElementById("online-users-sidebar")
+              .classList.remove("open");
           }
         }
         const canvas = document.getElementById("gameCanvas");
@@ -723,6 +851,7 @@
             );
             cacheConnection.on("ReceiveMatchRestart", ReceiveMatchRestart);
             cacheConnection.on("ReceiveSetNameSuccess", ReceiveSetNameSuccess); // Listen to SetName success event
+            cacheConnection.on("DisplayOnlineUsers", displayOnlineUsers); // Listen to online users event
           } catch (err) {
             console.error(err);
             return null; // Connection failed
@@ -735,6 +864,20 @@
         if (!connection) {
           alert("Failed to connect to the server. Please try again.");
           return;
+        }
+
+        async function displayOnlineUsers(users, message) {
+          alert(message); // Log the message from the server
+          const onlineUsersDiv = document.getElementById("online-users");
+          onlineUsersDiv.innerHTML = ""; // Clear the existing list
+
+          users.forEach((user) => {
+            const userDiv = document.createElement("div");
+            userDiv.style.display = "flex";
+            userDiv.style.alignItems = "center";
+            userDiv.textContent = user.name;
+            onlineUsersDiv.appendChild(userDiv);
+          });
         }
 
         async function SetName(name) {

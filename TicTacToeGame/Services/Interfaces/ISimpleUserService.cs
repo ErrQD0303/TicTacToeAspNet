@@ -9,5 +9,6 @@ namespace TicTacToeGame.Services.Interfaces
         Task RemoveAllAsync(string userId);
         Task<SimpleUser?> FirstOrDefaultUserWithNameAsync(string name);
         Task<bool> IsUserStillAvaiable(string userId);
+        Task<List<SimpleUser>> GetAllValidUsers();
     }
 }
