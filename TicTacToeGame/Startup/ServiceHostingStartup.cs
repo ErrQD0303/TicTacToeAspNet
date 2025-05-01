@@ -1,4 +1,5 @@
 
+using TicTacToeGame.Models;
 using TicTacToeGame.Repository;
 using TicTacToeGame.Repository.Interfaces;
 using TicTacToeGame.Services;
@@ -14,16 +15,8 @@ public class ServiceHostingStartup : IHostingStartup
     {
         builder.ConfigureServices((context, services) =>
         {
-            services.AddTransient<IUserRepository, UserRepository>();
-            services.AddTransient<ITicTacToeMatchRepository, TicTacToeMatchRepository>();
-            services.AddTransient<ITicTacToeMatchHistoryRepository, TicTacToeMatchHistoryRepository>();
-
-            services.AddTransient<IUserService, UserService>();
-            services.AddTransient<ITicTacToeMatchService, TicTacToeMatchService>();
-            services.AddTransient<ITicTacToeMatchHistoryService, TicTacToeMatchHistoryService>();
-            services.AddTransient<ITokenService, TokenService>();
-
-            services.AddTransient<IUnitOfWork, UnitOfWork>();
+            services.AddSingleton<ISimpleUserService, SimpleUserService>();
+            services.AddSingleton<ITokenService<SimpleUser>, SimpleTokenService>();
         });
     }
 }

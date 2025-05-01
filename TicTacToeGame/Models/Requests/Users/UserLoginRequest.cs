@@ -9,3 +9,9 @@ public class UserLoginRequest
     [JsonPropertyName("password")]
     public string Password { get; set; } = string.Empty;
 }
+
+public class SimpleUserLoginRequest
+{
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = string.Empty;
+}

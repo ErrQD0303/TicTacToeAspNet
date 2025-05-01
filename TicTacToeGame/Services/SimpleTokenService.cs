@@ -8,22 +8,20 @@ using TicTacToeGame.Services.Interfaces;
 
 namespace TicTacToeGame.Services;
 
-public class TokenService : ITokenService<AppUser>
+public class SimpleTokenService : ITokenService<SimpleUser>
 {
     public JwtConfigurationOptions JwtOptions { get; private set; }
 
-    public TokenService(IOptions<JwtConfigurationOptions> jwtOptions)
+    public SimpleTokenService(IOptions<JwtConfigurationOptions> jwtOptions)
     {
         JwtOptions = jwtOptions.Value;
     }
-    public string GenerateAccessToken(AppUser user, int? expiration = null)
+    public string GenerateAccessToken(SimpleUser user, int? expiration = null)
     {
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.UserName),
-            new Claim(ClaimTypes.GivenName, user.Name),
-            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Name, user.Name),
         };
         return JwtGenerator.GenerateAccessToken(JwtOptions.Issuer, JwtOptions.Audience, JwtOptions.IssuerSigningKey, expiration ?? JwtOptions.Expiration, claims, null);
     }

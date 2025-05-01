@@ -7,4 +7,5 @@ public interface IGameHubClient
     Task ReceiveExitMatch(string gameId, string message);
     Task ReceiveMatchRestart(string newGameId, string message, int row, int column);
     Task ReceiveUserAlreadyInAMatch(string gameId, string opponent);
+    Task ReceiveSetNameSuccess(string id, string name);
 }

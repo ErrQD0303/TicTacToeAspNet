@@ -1,6 +1,4 @@
-
 using System.Collections.Concurrent;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using TicTacToeGame.Helpers.Enum;
 using TicTacToeGame.Helpers.Mappers;
@@ -9,140 +7,115 @@ using TicTacToeGame.Services.Interfaces;
 
 namespace TicTacToeGame.Hub;
 
-[Authorize]
+// [Authorize]
 public class GameHub : Hub<IGameHubClient>
 {
     public ILogger<GameHub> Logger { get; }
-    public static List<TicTacToeMatch> CurrentMatches { get; } = [];
-    public IUserService UserService { get; }
-    public ITicTacToeMatchService TicTacToeMatchService { get; }
-    private static string AllChatGroupId { get; } = "AllChat";
+    public static List<SimpleMatch> CurrentMatches { get; } = [];
+    public static ConcurrentQueue<SimpleUser> FindGameQueue { get; } = new();
+    public static ISimpleUserService Users { get; private set; } = default!;
     private static readonly Random _random = new();
-    private static ConcurrentDictionary<string, List<string>> UserConnections { get; } = new();
 
-    public GameHub(IUserService userService, ITicTacToeMatchService ticTacToeMatchService, ILogger<GameHub> logger)
+    public GameHub(ILogger<GameHub> logger, ISimpleUserService userService)
     {
+        Users = userService;
         Logger = logger;
-        UserService = userService;
-        this.TicTacToeMatchService = ticTacToeMatchService;
     }
-
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
+        Users = Users ?? throw new InvalidOperationException("User service is not initialized.");
+        await Users.LoginAsync(Context.ConnectionId);
+    }
 
-        var user = await UserService.GetUserByIdAsync(Context.UserIdentifier!);
-        if (user == null)
+    public async Task SetName(string name)
+    {
+        var existedUser = await Users.FirstOrDefaultUserWithNameAsync(name);
+        if (existedUser != null)
         {
-            Logger.LogWarning("User not found: {UserId}", Context.UserIdentifier);
-            throw new HubException("User not found");
-        }
-        Logger.LogInformation("User connected: {UserId}", user.Id);
-        if (!UserConnections.TryGetValue(user.Id, out var connections))
-        {
-            connections = [];
-            UserConnections.TryAdd(user.Id, connections);
+            Logger.LogWarning("User found: {UserId}", Context.ConnectionId);
+            throw new HubException($"User with this name {name} already exists.");
         }
 
-        connections.Add(Context.ConnectionId);
-        Logger.LogInformation("User {UserId} has {ConnectionCount} connections",
-        user.Id, connections.Count);
-        var existedMatch = FindExistedMatch(user.Id);
-        if (!string.IsNullOrEmpty(existedMatch))
-        {
-            Logger.LogInformation("User {UserId} is already in a match: {MatchId}", user.Id, existedMatch);
-            await Clients.Caller.ReceiveUserAlreadyInAMatch(existedMatch, user.Id);
-        }
-        else
-        {
-            Logger.LogInformation("User {UserId} is not in a match", user.Id);
-        }
+        var currentUser = await Users.GetUserByIdAsync(Context.ConnectionId);
+        currentUser.Name = name;
+        await Clients.Caller.ReceiveSetNameSuccess(currentUser.Id, currentUser.Name);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
 
-        var user = await UserService.GetUserByIdAsync(Context.UserIdentifier!);
+        await Users.RemoveAllAsync(Context.ConnectionId);
+        var matches = CurrentMatches.Where(m => (m.Player1Id == Context.ConnectionId || m.Player2Id == Context.ConnectionId) && m.Result == MatchResult.Ongoing).ToList();
+        var user = await Users.GetUserByIdAsync(Context.ConnectionId);
         if (user == null)
         {
-            Logger.LogWarning("User not found: {UserId}", Context.UserIdentifier);
+            Logger.LogWarning("User not found: {UserId}", Context.ConnectionId);
             return;
         }
-
-        Logger.LogInformation("User disconnected: {UserId}", user.Id);
-        if (UserConnections.TryGetValue(user.Id, out var connections))
+        foreach (var match in matches)
         {
-            connections.Remove(Context.ConnectionId);
-            Logger.LogInformation("User {UserId} has {ConnectionCount} connections", user.Id, connections.Count);
-            if (connections.Count == 0)
-            {
-                UserConnections.TryRemove(user.Id, out _);
-                Logger.LogInformation("User {UserId} removed from connections", user.Id);
-            }
+            await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveExitMatch(match.Player1Id, $"Player {user.Name} exited the match");
         }
     }
 
     public async Task FindGame(int row, int column)
     {
-        var you = (await UserService.GetUserByIdAsync(Context.UserIdentifier!))?.ToAppUser();
-        if (you == null)
+        var currentUser = await Users.GetUserByIdAsync(Context.ConnectionId);
+        if (currentUser == null)
         {
-            Logger.LogWarning("User not found: {UserId}", Context.UserIdentifier);
-            throw new HubException("User not found");
+            Logger.LogWarning("User not found: {UserId}", Context.ConnectionId);
+            throw new HubException("User not found.");
         }
 
-        var existedMatch = FindExistedMatch(Context.UserIdentifier!);
+        var existedMatch = FindExistedMatch(Context.ConnectionId);
         if (!string.IsNullOrEmpty(existedMatch))
         {
-            Logger.LogWarning("User {UserId} is already in a match: {MatchId}", you.Id, existedMatch);
-            var userConnections = UserConnections[you.Id];
-            await Clients.Clients(userConnections).ReceiveUserAlreadyInAMatch(existedMatch, you.Id);
+            Logger.LogWarning("User {UserId} is already in a match: {MatchId}", currentUser.Id, existedMatch);
+            await Clients.Caller.ReceiveUserAlreadyInAMatch(existedMatch, currentUser.Id);
             return;
         }
 
-        Logger.LogInformation("User {UserId} is looking for a game", you.Id);
+        Logger.LogInformation("User {UserId} is looking for a game", currentUser.Id);
 
-        var findingMatch = CurrentMatches.FirstOrDefault(m => m.Player2 == null);
+        var findingMatch = CurrentMatches.FirstOrDefault(m => string.IsNullOrEmpty(m.Player2Id));
         if (findingMatch != null)
         {
             var random = _random.Next(0, 2);
             if (random == 0)
             {
                 findingMatch.Player2Id = findingMatch.Player1Id;
-                findingMatch.Player2 = findingMatch.Player1;
-                findingMatch.Player1Id = you.Id;
-                findingMatch.Player1 = you;
+                findingMatch.Player1Id = currentUser.Id;
             }
             else
             {
-                findingMatch.Player2Id = you.Id;
-                findingMatch.Player2 = you;
+                findingMatch.Player2Id = currentUser.Id;
             }
             findingMatch.IsPlayer1Turn = true;
-            var player1Connetions = UserConnections[findingMatch.Player1!.Id] ?? [];
-            var player2Connections = UserConnections[findingMatch.Player2!.Id] ?? [];
-            var connections = player1Connetions.Concat(player2Connections).ToList();
-            await Clients.Clients(connections).ReceiveMatchFound(findingMatch.Player1!.UserName, findingMatch.Id.ToString(), findingMatch.Row, findingMatch.Column);
+            var player1 = await Users.GetUserByIdAsync(findingMatch.Player1Id);
+            var player2 = await Users.GetUserByIdAsync(findingMatch.Player2Id);
+            await Clients.Clients(findingMatch.Player1Id).ReceiveMatchFound(player1?.Name ?? "", findingMatch.Id.ToString(), findingMatch.Row, findingMatch.Column);
+            await Clients.Clients(findingMatch.Player2Id).ReceiveMatchFound(player2?.Name ?? "", findingMatch.Id.ToString(), findingMatch.Row, findingMatch.Column);
             return;
         }
 
-        var newMatch = new TicTacToeMatch(row, column)
+        var newMatch = new SimpleMatch
         {
             Id = Guid.NewGuid().ToString(),
-            Player1Id = you.Id,
-            Player1 = you,
-            TicTacToeMatchHistory = new TicTacToeMatchHistory
-            {
-                Result = MatchResult.Ongoing
-            }
+            Row = row,
+            Column = column,
+            Player1Id = currentUser.Id,
+            IsPlayer1Turn = true,
+            Result = MatchResult.Ongoing,
+            Winner = string.Empty,
         };
 
         CurrentMatches.Add(newMatch);
         return;
     }
 
-    public async Task EndMatch(string matchId, string winner, string[][] board)
+    public Task EndMatch(string matchId, string winner, string[][] board)
     {
         var userId = GetUserId();
         var match = CurrentMatches.FirstOrDefault(m => m.Id.ToString() == matchId);
@@ -152,60 +125,44 @@ public class GameHub : Hub<IGameHubClient>
             throw new HubException("Match not found.");
         }
 
-        if (match.TicTacToeMatchHistory.Result != MatchResult.Ongoing)
+        if (match.Result != MatchResult.Ongoing)
         {
             Logger.LogWarning("Match is not ongoing: {MatchId}", matchId);
             throw new HubException("Match is not ongoing.");
         }
 
-        match.TicTacToeMatchHistory.Result = winner switch
+        match.Result = winner switch
         {
             "X" => MatchResult.Player1Win,
             "4" => MatchResult.Player2Win,
             _ => MatchResult.Draw
         };
 
-        match.Board = new CellState[match.Row, match.Column];
-        for (int i = 0; i < match.Row; i++)
-        {
-            for (int j = 0; j < match.Column; j++)
-            {
-                match.Board[i, j] = board[i][j] switch
-                {
-                    "X" => CellState.X,
-                    "O" => CellState.O,
-                    _ => CellState.Empty
-                };
-            }
-        }
-        await TicTacToeMatchService.AddAsync(match.ToCreateTicTacToeMatchDto());
+        return Task.CompletedTask;
     }
 
     public async Task ExitMatch(string matchId)
     {
         var userId = GetUserId();
-        var match = CurrentMatches.FirstOrDefault(m => m.Id.ToString() == matchId && (m.Player1?.Id == userId || m.Player2?.Id == userId));
+        var match = CurrentMatches.FirstOrDefault(m => m.Id.ToString() == matchId && (m.Player1Id == userId || m.Player2Id == userId));
         if (match == null)
         {
             Logger.LogWarning("Match not found: {MatchId}", matchId);
             return;
         }
 
-        if (match.TicTacToeMatchHistory.Result != MatchResult.Ongoing)
+        if (match.Result != MatchResult.Ongoing)
         {
             Logger.LogWarning("Match is not ongoing: {MatchId}", matchId);
             return;
         }
 
-        match.TicTacToeMatchHistory.Result = match.Player1?.Id == userId ? MatchResult.Player2Win : MatchResult.Player1Win;
-        await TicTacToeMatchService.AddAsync(match.ToCreateTicTacToeMatchDto());
+        match.Result = match.Player1Id == userId ? MatchResult.Player2Win : MatchResult.Player1Win;
 
         Logger.LogInformation("User {0} and {1} exited match {MatchId}", userId, match.Player2Id, matchId);
-        var player1Connections = UserConnections[match.Player1Id ?? ""] ?? [];
-        var player2Connections = UserConnections[match.Player2Id ?? ""] ?? [];
-        var connections = player1Connections.Concat(player2Connections).ToList();
+        var currentUser = await Users.GetUserByIdAsync(userId);
 
-        await Clients.Clients(connections).ReceiveExitMatch(match.Player1!.Id, $"Player {userId} exited the match");
+        await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveExitMatch(match.Player1Id, $"Player {currentUser?.Name ?? ""} exited the match");
     }
 
     public async Task Restart(string matchId, int row, int column)
@@ -218,70 +175,57 @@ public class GameHub : Hub<IGameHubClient>
             throw new HubException("Match not found.");
         }
 
-        if (match.TicTacToeMatchHistory.Result == MatchResult.Ongoing)
+        if (match.Result == MatchResult.Ongoing)
         {
-            match.TicTacToeMatchHistory.Result = MatchResult.Draw;
-            await TicTacToeMatchService.AddAsync(match.ToCreateTicTacToeMatchDto());
+            match.Result = MatchResult.Draw;
         }
 
-        var player1Connections = UserConnections[match.Player1Id ?? ""] ?? [];
-        var player2Connections = UserConnections[match.Player2Id ?? ""] ?? [];
-        var connections = player1Connections.Concat(player2Connections).ToList();
-
-        var newMatch = new TicTacToeMatch(match.Row, match.Column)
+        var newMatch = new SimpleMatch
         {
             Id = Guid.NewGuid().ToString(),
             Row = row,
             Column = column,
             Player1Id = match.Player2Id,
-            Player1 = match.Player2,
             Player2Id = match.Player1Id,
-            Player2 = match.Player1,
             IsPlayer1Turn = true,
-            TicTacToeMatchHistory = new TicTacToeMatchHistory
-            {
-                Result = MatchResult.Ongoing
-            }
+            Result = MatchResult.Ongoing,
+            Winner = string.Empty,
         };
 
         CurrentMatches.Add(newMatch);
 
-        await Clients.Clients(connections).ReceiveMatchRestart(newMatch.Id, $"Player {userId} restarted the match", newMatch.Row, newMatch.Column);
+        var currentUser = await Users.GetUserByIdAsync(userId);
+        await Clients.Clients([newMatch.Player1Id, newMatch.Player2Id]).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch.Row, newMatch.Column);
     }
 
     public async Task SendMove(string row, string column, string matchId)
     {
         var userId = GetUserId();
-        var connectionId = Context.ConnectionId;
 
         var match = GetMatchById(matchId);
 
-        if ((match.Player1?.Id == userId && match.IsPlayer1Turn == false) || (match.Player2?.Id == userId && match.IsPlayer1Turn == true))
+        if ((match.Player1Id == userId && match.IsPlayer1Turn == false) || (match.Player2Id == userId && match.IsPlayer1Turn == true))
         {
             Logger.LogWarning("It's not your turn: {UserId}", userId);
             throw new HubException("It's not your turn.");
         }
         match.IsPlayer1Turn = !match.IsPlayer1Turn;
 
-        var player1Connections = UserConnections[match.Player1Id ?? ""] ?? [];
-        var player2Connections = UserConnections[match.Player2Id ?? ""] ?? [];
-        var connections = player1Connections.Concat(player2Connections).ToList();
-
-        await Clients.Clients(connections).ReceiveMove(row, column, match.Player1Id == userId ? CellState.X.ToString() : CellState.O.ToString());
+        await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(row, column, match.Player1Id == userId ? CellState.X.ToString() : CellState.O.ToString());
     }
 
     public string GetMark(string matchId)
     {
         var match = GetMatchById(matchId);
-        return match.Player1Id == Context.UserIdentifier ? CellState.X.ToString() : CellState.O.ToString();
+        return match.Player1Id == Context.ConnectionId ? CellState.X.ToString() : CellState.O.ToString();
     }
 
     private static bool IsUserInMatch(string userId, string matchId)
     {
-        return CurrentMatches.Any(m => m.Id.ToString() == matchId && (m.Player1?.Id == userId || m.Player2?.Id == userId));
+        return CurrentMatches.Any(m => m.Id.ToString() == matchId && (m.Player1Id == userId || m.Player2Id == userId));
     }
 
-    private TicTacToeMatch GetMatchById(string matchId)
+    private SimpleMatch GetMatchById(string matchId)
     {
         var userId = GetUserId();
 
@@ -297,7 +241,7 @@ public class GameHub : Hub<IGameHubClient>
             throw new HubException("You are not a player in this match.");
         }
 
-        if (match.TicTacToeMatchHistory.Result != MatchResult.Ongoing)
+        if (match.Result != MatchResult.Ongoing)
         {
             throw new HubException("Match is not ongoing.");
         }
@@ -307,7 +251,7 @@ public class GameHub : Hub<IGameHubClient>
 
     private string GetUserId()
     {
-        var userId = Context.UserIdentifier;
+        var userId = Context.ConnectionId;
         if (string.IsNullOrEmpty(userId))
         {
             throw new HubException("User not found.");
@@ -317,7 +261,7 @@ public class GameHub : Hub<IGameHubClient>
 
     private static string FindExistedMatch(string userId)
     {
-        var match = CurrentMatches.LastOrDefault(m => (m.Player1?.Id == userId || m.Player2?.Id == userId) && m.TicTacToeMatchHistory.Result == MatchResult.Ongoing);
+        var match = CurrentMatches.LastOrDefault(m => (m.Player1Id == userId || m.Player2Id == userId) && m.Result == MatchResult.Ongoing);
         if (match == null)
         {
             return string.Empty;

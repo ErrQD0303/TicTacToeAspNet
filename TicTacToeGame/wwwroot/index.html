@@ -186,28 +186,8 @@
     <div id="auth-container">
       <form id="login-form" class="auth-form">
         <h3>Login</h3>
-        <input type="text" id="login-username" placeholder="Username" />
-        <input type="password" id="login-password" placeholder="Password" />
-        <button type="button" onclick="login()">Login</button>
-        <span id="switch-to-register" onclick="showRegisterForm()"
-          >No account? Register here</span
-        >
-      </form>
-
-      <form id="register-form" class="auth-form" style="display: none">
-        <h3>Register</h3>
-        <input type="text" id="register-username" placeholder="Username" />
-        <input type="password" id="register-password" placeholder="Password" />
-        <input type="email" id="register-email" placeholder="Email" />
-        <input
-          type="text"
-          id="register-display-name"
-          placeholder="Display Name"
-        />
-        <span id="switch-to-login" onclick="showLoginForm()"
-          >Already have an account? Login here</span
-        >
-        <button type="button" onclick="register()">Register</button>
+        <input type="text" id="login-username" placeholder="Your Name" />
+        <button id="login-btn" type="button">Login</button>
       </form>
     </div>
 
@@ -232,7 +212,7 @@
       <button id="btn-start-game" style="display: block">Find Game</button>
       <button id="btn-exit-game" style="display: none">Exit Game</button>
       <button id="btn-reset-game" style="display: none">Reset Game</button>
-      <button onclick="logout()">Logout</button>
+      <button id="btn-logout">Logout</button>
     </div>
 
     <h1 id="app-header">Caro (10x10)</h1>
@@ -241,157 +221,93 @@
     </div>
     <p id="status"></p>
 
-    <script>
-      const backendUrl =
-        "tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net"; // Update this to your backend URL, in reality you will first deploy the backend, then you will need to update this URL to the backend URL, and then deploy the frontend, so that it can access the backend.
-      let currentUser = null;
-
-      function toggleSidebar() {
-        document.getElementById("user-sidebar").classList.toggle("open");
-      }
-
-      async function login() {
-        const username = document.getElementById("login-username").value;
-        const password = document.getElementById("login-password").value;
-
-        if (username && password) {
-          let data;
-          try {
-            const response = await fetch(
-              `${backendUrl}/api/identity/login`, // Update this to your backend URL
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                credentials: "include",
-                body: JSON.stringify({ username, password }),
-              }
-            );
-            responseBody = await response.json();
-            data = responseBody.data;
-            if (!response.ok) {
-              alert("Login failed. Please check your credentials.");
-              return;
-            }
-          } catch (error) {
-            console.error("Error during login:", error);
-            alert("An error occurred during login. Please try again.");
-            return;
-          }
-          localStorage.setItem(
-            "accessToken",
-            data.token_type + " " + data.access_token
-          );
-          await retrieveUserInfo(); // Fetch user info after login
-          updateAuthUI();
-        } else {
-          alert("Please enter username and password.");
-        }
-      }
-
-      async function retrieveUserInfo() {
-        const token = localStorage.getItem("accessToken");
-        if (!token) return null;
-
-        try {
-          const response = await fetch(
-            `${backendUrl}/api/identity/userinfo`, // Update this to your backend URL
-            {
-              method: "GET",
-              headers: {
-                Authorization: token,
-              },
-              credentials: "include",
-            }
-          );
-          if (response.ok) {
-            const responseBody = await response.json();
-            const data = responseBody.data;
-            currentUser = {
-              ...data,
-            }; // Assuming the API returns the username in the response
-            return data;
-          }
-          throw new Error(data.message);
-        } catch (error) {
-          console.error("Error fetching user info:", error);
-          currentUser = null;
-        }
-      }
-
-      async function register() {
-        const username = document.getElementById("register-username").value;
-        const password = document.getElementById("register-password").value;
-        const email = document.getElementById("register-email").value;
-        const name = document.getElementById("register-display-name").value;
-
-        if (username && password && email && name) {
-          const response = await fetch(
-            `${backendUrl}/api/identity/register`, // Update this to your backend URL
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              credentials: "include",
-              body: JSON.stringify({ username, password, email, name }),
-            }
-          );
-          updateAuthUI();
-          alert("Registered as " + username + ". Please log in.");
-        } else {
-          alert("Please enter username, password, email and name.");
-        }
-      }
-
-      function logout() {
-        localStorage.removeItem("accessToken");
-        currentUser = null;
-        updateAuthUI();
-      }
-      function showRegisterForm() {
-        document.getElementById("login-form").style.display = "none";
-        document.getElementById("register-form").style.display = "block";
-      }
-
-      function updateAuthUI() {
-        const token = localStorage.getItem("accessToken");
-        const authContainer = document.getElementById("auth-container");
-        const loginForm = document.getElementById("login-form");
-        const registerForm = document.getElementById("register-form");
-        const welcomeMessage = document.getElementById("welcome-message");
-        const userSidebar = document.getElementById("user-sidebar");
-        const toggleBtn = document.getElementById("sidebar-toggle");
-
-        if (token) {
-          authContainer.style.display = "none";
-          loginForm.style.display = "none";
-          registerForm.style.display = "none";
-          welcomeMessage.textContent = `Welcome, ${currentUser.name}`;
-          toggleBtn.style.display = "block"; // Show the toggle button
-          userSidebar.style.display = "flex"; // Show the sidebar
-        } else {
-          authContainer.style.display = "block";
-          loginForm.style.display = "block";
-          registerForm.style.display = "none";
-          toggleBtn.style.display = "none"; // Hide the toggle button
-          userSidebar.style.display = "none"; // Hide the sidebar
-        }
-      }
-
-      (async () => {
-        const token = localStorage.getItem("accessToken");
-        if (token) {
-          await retrieveUserInfo(); // Fetch user info after login
-        }
-        updateAuthUI();
-      })();
-    </script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script>
       (async () => {
+        // const backendUrl =
+        //   "tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net"; // Update this to your backend URL, in reality you will first deploy the backend, then you will need to update this URL to the backend URL, and then deploy the frontend, so that it can access the backend.
+        const backendUrl = "https://localhost:7194";
+        let currentUser = null;
+        let token = null; // Store the token here
+
+        function toggleSidebar() {
+          document.getElementById("user-sidebar").classList.toggle("open");
+        }
+
+        document.getElementById("login-btn").addEventListener("click", login);
+
+        async function login() {
+          const username = document.getElementById("login-username").value;
+
+          if (username) {
+            try {
+              const connection = await getSignalRConnection();
+              await connection.invoke("SetName", username); // Send login request to server
+            } catch (error) {
+              console.error("Error during login:", error);
+              alert("Login failed. Please try again.");
+              return;
+            }
+          }
+
+          token = true;
+          updateAuthUI(); // Update the UI to show the logged-in state
+        }
+
+        async function retrieveUserInfo() {
+          try {
+            const response = await fetch(
+              `${backendUrl}/api/identity/userinfo`, // Update this to your backend URL
+              {
+                method: "GET",
+                headers: {},
+                credentials: "include",
+              }
+            );
+            if (response.ok) {
+              const responseBody = await response.json();
+              const data = responseBody.data;
+              currentUser = {
+                ...data,
+              }; // Assuming the API returns the username in the response
+              return data;
+            }
+            throw new Error(data.message);
+          } catch (error) {
+            console.error("Error fetching user info:", error);
+            currentUser = null;
+          }
+        }
+
+        document.getElementById("btn-logout").addEventListener("click", logout); // Add event listener for logout button
+
+        function logout() {
+          currentUser = null;
+          token = null; // Clear the token
+          updateAuthUI();
+        }
+
+        function updateAuthUI() {
+          const authContainer = document.getElementById("auth-container");
+          const loginForm = document.getElementById("login-form");
+          const welcomeMessage = document.getElementById("welcome-message");
+          const userSidebar = document.getElementById("user-sidebar");
+          const toggleBtn = document.getElementById("sidebar-toggle");
+
+          if (token) {
+            console.log(currentUser);
+            authContainer.style.display = "none";
+            loginForm.style.display = "none";
+            welcomeMessage.textContent = `Welcome, ${currentUser.name}`;
+            toggleBtn.style.display = "block"; // Show the toggle button
+            userSidebar.style.display = "flex"; // Show the sidebar
+          } else {
+            authContainer.style.display = "block";
+            loginForm.style.display = "block";
+            toggleBtn.style.display = "none"; // Hide the toggle button
+            userSidebar.style.display = "none"; // Hide the sidebar
+          }
+        }
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
@@ -750,15 +666,6 @@
           }
           cacheConnection = new signalR.HubConnectionBuilder()
             .withUrl(`${backendUrl}/hubs/gamehub`, {
-              accessTokenFactory: () => {
-                var accessToken = localStorage.getItem("accessToken"); // <-- update this if local or hosted
-
-                if (accessToken.startsWith("Bearer ")) {
-                  accessToken = accessToken.replace("Bearer ", "");
-                }
-
-                return accessToken; // Return the access token
-              },
               withCredentials: true, // ✅ important
             }) // <-- update this if local or hosted
             .build();
@@ -778,11 +685,32 @@
             ReceiveUserAlreadyInAMatch
           );
           cacheConnection.on("ReceiveMatchRestart", ReceiveMatchRestart);
+          cacheConnection.on("ReceiveSetNameSuccess", ReceiveSetNameSuccess); // Listen to SetName success event
 
           return cacheConnection; // Return the new connection
         }
 
         const connection = await getSignalRConnection();
+
+        async function SetName(name) {
+          try {
+            await connection.invoke("SetName", name); // Send login request to server
+          } catch (error) {
+            console.error("Error during SetName:", error);
+            alert("SetName failed. Please try again.");
+          }
+        }
+
+        async function ReceiveSetNameSuccess(id, name) {
+          currentUser = {
+            ...(currentUser ?? {}),
+            id: id,
+            name: name,
+          }; // Store the current user name
+          const welcomeMessage = document.getElementById("welcome-message");
+          welcomeMessage.textContent = `Welcome, ${currentUser.name}`;
+          updateAuthUI(); // Update the UI to show the logged-in state
+        }
 
         async function GetMark() {
           try {

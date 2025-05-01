@@ -47,10 +47,10 @@ public class AppConstants
         {
             public class LoginResponses
             {
-                public const string InvalidUsernameOrPassword = "Invalid username or password.";
-                public static readonly Dictionary<string, string> InvalidUsernameOrPasswordErrors = new()
+                public const string UsernameAlreadyExisted = "Username already existed.";
+                public static readonly Dictionary<string, string> UsernameAlreadyExistedErrors = new()
                 {
-                    { "summary", InvalidUsernameOrPassword }
+                    { "summary", UsernameAlreadyExisted }
                 };
                 public const string LoginSuccessful = "Login successful.";
             }
