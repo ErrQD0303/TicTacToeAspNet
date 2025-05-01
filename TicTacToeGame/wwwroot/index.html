@@ -2,8 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Caro (10x10) - Canvas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" /> -->
+    <title>Caro (10x10)</title>
     <style>
+      body {
+        text-align: center;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
       canvas {
         border: 2px solid #333;
         display: block;
@@ -11,16 +24,369 @@
         background: #fafafa;
         cursor: pointer;
       }
-      body {
-        text-align: center;
-        font-family: Arial, sans-serif;
+
+      #auth-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 400px;
+        width: 90%;
+        padding: 20px;
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        background-color: #fff;
+        z-index: 10;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .auth-form {
+        margin-bottom: 20px;
+      }
+
+      .auth-form input {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0;
+        box-sizing: border-box;
+      }
+
+      .auth-form button {
+        width: 100%;
+        padding: 8px;
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .auth-form button:hover {
+        background-color: #2563eb;
+      }
+
+      #switch-to-register {
+        display: block;
+        margin-top: 10px;
+        color: #3b82f6;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+
+      #user-sidebar {
+        position: fixed;
+        top: 0;
+        left: -100vw; /* Hidden by default */
+        height: 100vh;
+        width: 250px;
+        background-color: #e0f2fe;
+        border-right: 2px solid #93c5fd;
+        padding: 20px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        transition: left 0.3s ease;
+        z-index: 1000;
+        gap: 10px;
+      }
+
+      #user-sidebar.open {
+        left: 0;
+      }
+
+      #user-sidebar h3 {
+        margin-top: 0;
+        color: #1e3a8a;
+        font-size: 1.2rem;
+      }
+
+      #user-sidebar #welcome-message {
+        font-weight: bold;
+        margin-bottom: 20px;
+        display: block;
+      }
+
+      #user-sidebar button {
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        padding: 10px;
+        width: 100%;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      #user-sidebar button:hover {
+        background-color: #2563eb;
+      }
+
+      #sidebar-toggle {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1100;
+        background-color: #3b82f6;
+        color: white;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 20px;
+        cursor: pointer;
+      }
+
+      .game-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        overflow: scroll;
+      }
+      #board-size-controls {
+        margin: 10px auto;
+        margin-top: 20px;
+        font-size: 16px;
+      }
+
+      #board-size {
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #333;
+        margin-left: 10px;
+      }
+
+      /* Larger button on mobile */
+      @media (max-width: 600px) {
+        #sidebar-toggle {
+          padding: 14px 20px;
+          font-size: 24px;
+        }
+
+        #user-sidebar {
+          width: 90vw;
+          font-size: 16px;
+          padding: 15px;
+          top: 0;
+          left: -100vw; /* Hidden by default */
+        }
+
+        #user-sidebar button {
+          font-size: 16px;
+          padding: 12px;
+        }
+
+        #user-sidebar h3 {
+          font-size: 20px;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Caro (10x10)</h1>
-    <canvas id="gameCanvas" width="500" height="500"></canvas>
+    <div id="auth-container">
+      <form id="login-form" class="auth-form">
+        <h3>Login</h3>
+        <input type="text" id="login-username" placeholder="Username" />
+        <input type="password" id="login-password" placeholder="Password" />
+        <button type="button" onclick="login()">Login</button>
+        <span id="switch-to-register" onclick="showRegisterForm()"
+          >No account? Register here</span
+        >
+      </form>
+
+      <form id="register-form" class="auth-form" style="display: none">
+        <h3>Register</h3>
+        <input type="text" id="register-username" placeholder="Username" />
+        <input type="password" id="register-password" placeholder="Password" />
+        <input type="email" id="register-email" placeholder="Email" />
+        <input
+          type="text"
+          id="register-display-name"
+          placeholder="Display Name"
+        />
+        <span id="switch-to-login" onclick="showLoginForm()"
+          >Already have an account? Login here</span
+        >
+        <button type="button" onclick="register()">Register</button>
+      </form>
+    </div>
+
+    <button id="sidebar-toggle" style="display: none" onclick="toggleSidebar()">
+      ☰
+    </button>
+
+    <div id="user-sidebar" class="open" style="display: none">
+      <h3>User Info</h3>
+      <span id="welcome-message"></span>
+      <!-- Add this below the <h1> title -->
+      <div id="board-size-controls">
+        <label for="board-size">Board Size:</label>
+        <select id="board-size">
+          <option value="3" selected>3x3</option>
+          <option value="10">10x10</option>
+          <option value="15">15x15</option>
+          <option value="20">20x20</option>
+          <option value="25">25x25</option>
+        </select>
+      </div>
+      <button id="btn-start-game" style="display: block">Find Game</button>
+      <button id="btn-exit-game" style="display: none">Exit Game</button>
+      <button id="btn-reset-game" style="display: none">Reset Game</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+
+    <h1 id="app-header">Caro (10x10)</h1>
+    <div>
+      <canvas id="gameCanvas"></canvas>
+    </div>
     <p id="status"></p>
+
+    <script>
+      const backendUrl = "https://localhost:7194"; // Update this to your backend URL, in reality you will first deploy the backend, then you will need to update this URL to the backend URL, and then deploy the frontend, so that it can access the backend.
+      let currentUser = null;
+
+      function toggleSidebar() {
+        document.getElementById("user-sidebar").classList.toggle("open");
+      }
+
+      async function login() {
+        const username = document.getElementById("login-username").value;
+        const password = document.getElementById("login-password").value;
+
+        if (username && password) {
+          let data;
+          try {
+            const response = await fetch(
+              `${backendUrl}/api/identity/login`, // Update this to your backend URL
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                credentials: "include",
+                body: JSON.stringify({ username, password }),
+              }
+            );
+            responseBody = await response.json();
+            data = responseBody.data;
+            if (!response.ok) {
+              alert("Login failed. Please check your credentials.");
+              return;
+            }
+          } catch (error) {
+            console.error("Error during login:", error);
+            alert("An error occurred during login. Please try again.");
+            return;
+          }
+          localStorage.setItem(
+            "accessToken",
+            data.token_type + " " + data.access_token
+          );
+          await retrieveUserInfo(); // Fetch user info after login
+          updateAuthUI();
+        } else {
+          alert("Please enter username and password.");
+        }
+      }
+
+      async function retrieveUserInfo() {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return null;
+
+        try {
+          const response = await fetch(
+            `${backendUrl}/api/identity/userinfo`, // Update this to your backend URL
+            {
+              method: "GET",
+              headers: {
+                Authorization: token,
+              },
+              credentials: "include",
+            }
+          );
+          if (response.ok) {
+            const responseBody = await response.json();
+            const data = responseBody.data;
+            currentUser = {
+              ...data,
+            }; // Assuming the API returns the username in the response
+            return data;
+          }
+          throw new Error(data.message);
+        } catch (error) {
+          console.error("Error fetching user info:", error);
+          currentUser = null;
+        }
+      }
+
+      async function register() {
+        const username = document.getElementById("register-username").value;
+        const password = document.getElementById("register-password").value;
+        const email = document.getElementById("register-email").value;
+        const name = document.getElementById("register-display-name").value;
+
+        if (username && password && email && name) {
+          const response = await fetch(
+            `${backendUrl}/api/identity/register`, // Update this to your backend URL
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+              body: JSON.stringify({ username, password, email, name }),
+            }
+          );
+          updateAuthUI();
+          alert("Registered as " + username + ". Please log in.");
+        } else {
+          alert("Please enter username, password, email and name.");
+        }
+      }
+
+      function logout() {
+        localStorage.removeItem("accessToken");
+        currentUser = null;
+        updateAuthUI();
+      }
+      function showRegisterForm() {
+        document.getElementById("login-form").style.display = "none";
+        document.getElementById("register-form").style.display = "block";
+      }
+
+      function updateAuthUI() {
+        const token = localStorage.getItem("accessToken");
+        const authContainer = document.getElementById("auth-container");
+        const loginForm = document.getElementById("login-form");
+        const registerForm = document.getElementById("register-form");
+        const welcomeMessage = document.getElementById("welcome-message");
+        const userSidebar = document.getElementById("user-sidebar");
+        const toggleBtn = document.getElementById("sidebar-toggle");
+
+        if (token) {
+          authContainer.style.display = "none";
+          loginForm.style.display = "none";
+          registerForm.style.display = "none";
+          welcomeMessage.textContent = `Welcome, ${currentUser.name}`;
+          toggleBtn.style.display = "block"; // Show the toggle button
+          userSidebar.style.display = "flex"; // Show the sidebar
+        } else {
+          authContainer.style.display = "block";
+          loginForm.style.display = "block";
+          registerForm.style.display = "none";
+          toggleBtn.style.display = "none"; // Hide the toggle button
+          userSidebar.style.display = "none"; // Hide the sidebar
+        }
+      }
+
+      (async () => {
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+          await retrieveUserInfo(); // Fetch user info after login
+        }
+        updateAuthUI();
+      })();
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script>
@@ -28,55 +394,157 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        const size = 10; // 10x10 grid
-        const cellSize = canvas.width / size;
+        let boardSize = 3;
+        const appHeader = document.getElementById("app-header");
+        document.title =
+          appHeader.textContent = `Caro (${boardSize}x${boardSize})`;
 
-        let board = Array(size)
-          .fill()
-          .map(() => Array(size).fill(""));
+        let CELL_SIZE = 50; // Size of each cell in pixels
+        // Dynamically size canvas based on number of cellsnumber of cells
+        resizeCanvas(); // Set initial size based on cell size and number of cells
+        // If you want it to scale to the screen (responsive):
+
+        let board = Array.from({ length: boardSize }, () =>
+          Array(boardSize).fill("")
+        );
+        let lock = false;
         // let currentPlayer = "X";
         let currentPlayer;
+        let currentGameId = null; // Store the current game ID
         let gameOver = false;
 
-        let hoverCell = { row: -1, col: -1 };
+        let hoverCell = { row: -1, col: -1 }; // Add this function to handle size changes
+        document
+          .getElementById("board-size")
+          .addEventListener("change", changeBoardSize);
 
+        document
+          .getElementById("btn-reset-game")
+          .addEventListener("click", async () => {
+            const sizeSelect = document.getElementById("board-size");
+            sizeSelect.value = boardSize; // Set the new board size from the select element
+            const row = parseInt(sizeSelect.value); // Get the new board size from the select element
+            const column = parseInt(sizeSelect.value); // Get the new board size from the select element
+            await connection.invoke("Restart", currentGameId, row, column); // Send reset game request to server
+            document.getElementById("status").textContent = ""; // Clear status message
+          });
+
+        document
+          .getElementById("btn-start-game")
+          .addEventListener("click", findGame);
+
+        document
+          .getElementById("btn-exit-game")
+          .addEventListener("click", exitGame);
+
+        async function exitGame() {
+          try {
+            await connection.invoke("ExitMatch", currentGameId); // Send exit game request to server
+            currentGameId = null; // Reset the game ID
+            document.getElementById("status").textContent = "Exited game.";
+            document.getElementById("btn-start-game").style.display = "block"; // Show the start game button again
+            document.getElementById("btn-exit-game").style.display = "none"; // Hide the exit game button
+            document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button again
+          } catch (err) {
+            console.error(err.toString());
+          }
+        }
+
+        async function findGame() {
+          try {
+            await connection.invoke("FindGame", boardSize, boardSize);
+          } catch (err) {
+            // Handle the response from the server if needed
+            console.error(err.toString());
+          }
+        }
+
+        async function changeBoardSize() {
+          const sizeSelect = document.getElementById("board-size");
+          boardSize = parseInt(sizeSelect.value);
+          await resetGame();
+          const row = parseInt(boardSize); // Get the new board size from the select element
+          const column = parseInt(boardSize); // Get the new board size from the select element
+          await connection.invoke("Restart", currentGameId, row, column); // Send reset game request to server
+        }
+
+        async function resetGame(newBoardSize) {
+          // Clear the current game state
+          boardSize = parseInt(document.getElementById("board-size").value); // Get the new board size from the select element
+          board = Array.from({ length: boardSize }, () =>
+            Array(boardSize).fill("")
+          );
+          gameOver = false;
+          currentPlayer = await GetMark();
+
+          // Update the title
+          document.title = document.getElementById(
+            "app-header"
+          ).textContent = `Caro (${boardSize}x${boardSize})`;
+
+          // Resize the canvas
+          resizeCanvas();
+
+          // Redraw the board
+          drawBoard();
+
+          // Clear status message
+          document.getElementById("status").textContent = "";
+          document.getElementById("btn-start-game").style.display = "none"; // Show the start game button again
+          document.getElementById("btn-exit-game").style.display = "block"; // Hide the exit game button
+          document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button again
+        }
+
+        function resizeCanvas() {
+          if (CELL_SIZE * boardSize > window.innerWidth) {
+            CELL_SIZE = window.innerWidth / boardSize; // Responsive size for smaller screens
+          } else {
+            CELL_SIZE = 50;
+          }
+          canvas.width = CELL_SIZE * boardSize;
+          canvas.height = CELL_SIZE * boardSize; // Set height based on cell size and
+        }
+
+        // Update canvas size based on window size and cell size
         function drawBoard() {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.lineWidth = 1.5;
-
-          // Draw grid lines
           ctx.strokeStyle = "#333";
-          for (let i = 0; i <= size; i++) {
+
+          for (let i = 0; i <= boardSize; i++) {
+            // Horizontal line
             ctx.beginPath();
-            ctx.moveTo(i * cellSize, 0);
-            ctx.lineTo(i * cellSize, canvas.height);
+            ctx.moveTo(0, i * CELL_SIZE);
+            ctx.lineTo(boardSize * CELL_SIZE, i * CELL_SIZE);
             ctx.stroke();
 
+            // Vertical line
             ctx.beginPath();
-            ctx.moveTo(0, i * cellSize);
-            ctx.lineTo(canvas.width, i * cellSize);
+            ctx.moveTo(i * CELL_SIZE, 0);
+            ctx.lineTo(i * CELL_SIZE, boardSize * CELL_SIZE);
             ctx.stroke();
           }
 
           // Highlight hovered cell
           if (
             hoverCell.row >= 0 &&
+            hoverCell.row < boardSize &&
             hoverCell.col >= 0 &&
+            hoverCell.col < boardSize &&
             !board[hoverCell.row][hoverCell.col]
           ) {
             ctx.fillStyle = "rgba(100, 149, 237, 0.3)";
             // Draw a rectangle from the top left point with cellSize wid and cellSize height
             ctx.fillRect(
-              hoverCell.col * cellSize,
-              hoverCell.row * cellSize,
-              cellSize,
-              cellSize
+              hoverCell.col * CELL_SIZE,
+              hoverCell.row * CELL_SIZE,
+              CELL_SIZE,
+              CELL_SIZE
             );
           }
 
           // Draw X and O
-          for (let row = 0; row < size; row++) {
-            for (let col = 0; col < size; col++) {
+          for (let row = 0; row < boardSize; row++) {
+            for (let col = 0; col < boardSize; col++) {
               const mark = board[row][col];
               if (mark) {
                 drawMark(mark, col, row);
@@ -87,14 +555,14 @@
 
         function drawMark(mark, col, row) {
           ctx.save();
-          ctx.font = `${cellSize * 0.6}px Arial`;
+          ctx.font = `${CELL_SIZE * 0.6}px Arial`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = mark === "X" ? "#ff3333" : "#3333ff";
           ctx.fillText(
             mark,
-            col * cellSize + cellSize / 2,
-            row * cellSize + cellSize / 2
+            col * CELL_SIZE + CELL_SIZE / 2,
+            row * CELL_SIZE + CELL_SIZE / 2
           );
           ctx.restore();
         }
@@ -103,9 +571,9 @@
         function animateMark(mark, col, row) {
           let scale = 0;
           const targetScale = 1;
-          const centerX = col * cellSize + cellSize / 2;
-          const centerY = row * cellSize + cellSize / 2;
-          const maxFontSize = cellSize * 0.6;
+          const centerX = col * CELL_SIZE + CELL_SIZE / 2;
+          const centerY = row * CELL_SIZE + CELL_SIZE / 2;
+          const maxFontSize = CELL_SIZE * 0.6;
 
           function animate() {
             ctx.save(); // Save the current state
@@ -129,7 +597,7 @@
         }
 
         function checkWinnerFromLastMove(row, column) {
-          const needed = 5; // 5 in a row to win
+          const needed = boardSize >= 10 ? 5 : 3; // 5 in a row to win for 10x10, 3 in a row to win for 3x3
           const player = board[row][column];
 
           if (!player) {
@@ -148,14 +616,14 @@
             let count = 1; // Start with the current piece
 
             // Check forward (positive direction)
-            let r = row + deltaRow;
-            let c = column + deltaColumn;
+            let r = +row + deltaRow;
+            let c = +column + deltaColumn;
             // Check if the next cell is within bounds and matches the player, if so, increase the count and move to the next cell, and so on until it doesn't match or is out of bounds
             while (
               r >= 0 &&
-              r < size &&
+              r < boardSize &&
               c >= 0 &&
-              c < size &&
+              c < boardSize &&
               board[r][c] === player
             ) {
               // If it matches, increase the count and move to the next cell
@@ -170,9 +638,9 @@
             // Check if the next cell is within bounds and matches the player, if so, increase the count and move to the next cell, and so on until it doesn't match or is out of bounds
             while (
               r >= 0 &&
-              r < size &&
+              r < boardSize &&
               c >= 0 &&
-              c < size &&
+              c < boardSize &&
               board[r][c] === player
             ) {
               count++;
@@ -187,6 +655,11 @@
             if (countInDirection(deltaRow, deltaColumn) >= needed) {
               return player; // Winner found
             }
+          }
+
+          // Flat the board to an array and check if all cells are filled
+          if (board.flat().every((cell) => cell)) {
+            return "draw";
           }
 
           // No winner found
@@ -208,8 +681,8 @@
               if (
                 newRow < 0 ||
                 newColumn < 0 ||
-                newRow >= size ||
-                newColumn >= size ||
+                newRow >= boardSize ||
+                newColumn >= boardSize ||
                 board[newRow][newColumn] !== player
               ) {
                 return false;
@@ -218,8 +691,8 @@
             return true;
           }
 
-          for (let row = 0; row < size; row++) {
-            for (let column = 0; column < size; column++) {
+          for (let row = 0; row < boardSize; row++) {
+            for (let column = 0; column < boardSize; column++) {
               if (board[row][column]) {
                 if (
                   checkDirection(row, column, 1, 0) || // vertical down
@@ -249,8 +722,14 @@
           const x = event.clientX - rect.left;
           const y = event.clientY - rect.top;
 
-          hoverCell.col = Math.floor(x / cellSize);
-          hoverCell.row = Math.floor(y / cellSize);
+          hoverCell.col = Math.min(
+            Math.max(0, Math.floor(x / CELL_SIZE)),
+            boardSize - 1
+          );
+          hoverCell.row = Math.min(
+            Math.max(0, Math.floor(y / CELL_SIZE)),
+            boardSize - 1
+          );
         }
 
         canvas.addEventListener("click", handleClick);
@@ -263,29 +742,64 @@
 
         gameLoop();
 
-        const connection = new signalR.HubConnectionBuilder()
-          .withUrl("/hub/gamehub", {
-            accessTokenFactory: () => {
-              return localStorage.getItem("access_token"); // <-- update this if local or hosted
-            },
-          }) // <-- update this if local or hosted
-          .build();
+        let cacheConnection = null; // Cache the connection to avoid creating multiple connections
+        async function getSignalRConnection() {
+          if (cacheConnection && cacheConnection.state === 1) {
+            return cacheConnection; // Return the cached connection if it exists
+          }
+          cacheConnection = new signalR.HubConnectionBuilder()
+            .withUrl(`${backendUrl}/hubs/gamehub`, {
+              accessTokenFactory: () => {
+                var accessToken = localStorage.getItem("accessToken"); // <-- update this if local or hosted
 
-        try {
-          await connection.start();
-        } catch (err) {
-          console.error(err);
-        }
+                if (accessToken.startsWith("Bearer ")) {
+                  accessToken = accessToken.replace("Bearer ", "");
+                }
 
-        try {
-          currentPlayer = await connection.invoke("GetMark"); // Get your current mark from the server
-        } catch (err) {
-          console.error(err.toString());
-        }
+                return accessToken; // Return the access token
+              },
+              withCredentials: true, // ✅ important
+            }) // <-- update this if local or hosted
+            .build();
 
-        async function sendMove(row, col, player) {
           try {
-            await connection.invoke("SendMove", row, col, player);
+            await cacheConnection.start();
+          } catch (err) {
+            console.error(err);
+          }
+
+          // Listen to moves from other players
+          cacheConnection.on("ReceiveMove", ReceiveMove);
+          cacheConnection.on("ReceiveExitMatch", ReceiveExitMatch);
+          cacheConnection.on("ReceiveMatchFound", ReceiveMatchFound);
+          cacheConnection.on(
+            "ReceiveUserAlreadyInAMatch",
+            ReceiveUserAlreadyInAMatch
+          );
+          cacheConnection.on("ReceiveMatchRestart", ReceiveMatchRestart);
+
+          return cacheConnection; // Return the new connection
+        }
+
+        const connection = await getSignalRConnection();
+
+        async function GetMark() {
+          try {
+            const mark = await connection.invoke("GetMark", currentGameId); // Get your current mark from the server
+            return mark;
+          } catch (err) {
+            console.error(err.toString());
+            document.getElementById("status").textContent =
+              "Failed to retrieve your mark. Please try again.";
+            document.getElementById("btn-exit-game").style.display = "none"; // Hide the exit game button
+
+            return null; // Mark retrieval failed
+          }
+        }
+
+        async function sendMove(row, col, matchId) {
+          try {
+            await connection.invoke("SendMove", row, col, matchId);
             return true; // Move sent successfully
           } catch (err) {
             console.error(err.toString());
@@ -293,20 +807,86 @@
           }
         }
 
-        // Listen to moves from other players
-        connection.on("ReceiveMove", (row, col, player) => {
+        function ReceiveMove(row, col, player) {
           if (!board[row][col] && !gameOver) {
-            board[row][col] = player;
+            if (!setBoardCell(row, col, player)) {
+              // Set the cell on the board
+              return; // Cell set failed, do not proceed
+            }
             //currentPlayer = player === "X" ? "O" : "X";
             animateMark(player, col, row);
             const winner = checkWinnerFromLastMove(row, col);
             if (winner) {
-              gameOver = true;
+              handleGameEnded(winner); // handle the end of the match
+            } else {
               document.getElementById("status").textContent =
-                winner === "draw" ? "It's a draw!" : `${winner} wins!`;
+                player === "X" ? "O's turn" : "X's turn";
             }
           }
-        });
+        }
+        function ReceiveExitMatch(opponentId, message) {
+          if (opponentId) {
+            alert(message); // Log the message from the server
+            currentGameId = null; // Reset the game ID
+            document.getElementById("status").textContent = "Exited game."; // Clear status message
+            document.getElementById("btn-start-game").style.display = "block"; // Show the start game button again
+            document.getElementById("btn-exit-game").style.display = "none"; // Hide the exit game button
+            document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button again
+            document.getElementById("user-sidebar").classList.add("open"); // Open the sidebar
+          }
+        }
+
+        // Listen to game start from server
+        async function ReceiveMatchFound(opponent, gameId, row, col) {
+          currentGameId = gameId; // Store the game ID
+          var result = await GetMark(); // Get your current mark from the server
+          if (result == null) return; // Mark retrieval failed
+          currentPlayer = result; // Set the current player based on the server response
+          document.getElementById("status").textContent =
+            currentPlayer === "X" ? "You are X" : "You are O";
+          document.getElementById("board-size").value = row; // Set the new board size from the server
+          await resetGame();
+          alert(
+            "Match found! You are playing against " +
+              opponent +
+              ". Your mark is " +
+              currentPlayer
+          );
+          document.getElementById("btn-start-game").style.display = "none"; // Hide the start game button
+          document.getElementById("btn-exit-game").style.display = "block"; // Show the exit game button
+          document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button
+          document.getElementById("user-sidebar").classList.remove("open"); // Hide the sidebar
+        }
+
+        async function ReceiveUserAlreadyInAMatch(gameId, opponent) {
+          currentGameId = gameId; // Store the game ID
+          document.getElementById("btn-start-game").style.display = "none"; // Hide the start game button
+          document.getElementById("btn-exit-game").style.display = "block"; // Show the exit game button
+          document.getElementById("btn-reset-game").style.display = "none"; // Hide the reset game button
+          const statusDiv = document.getElementById("status");
+          const previousContent = statusDiv.textContent;
+          statusDiv.textContent =
+            "You are already in a match with " +
+            opponent +
+            ". Please exit the current match before starting a new one.";
+          setTimeout(() => {
+            statusDiv.textContent = previousContent; // Reset the status message after 5 seconds
+          }, 2000); // 2000 milliseconds = 2 seconds
+        }
+
+        async function ReceiveMatchRestart(newGameId, message, row, column) {
+          alert(message); // Log the message from the server
+          currentGameId = newGameId; // Store the game ID
+          const sizeSelect = document.getElementById("board-size");
+          sizeSelect.value = row; // Set the new board size from the server
+          await resetGame(); // Reset the game state
+          document.getElementById("status").textContent =
+            "Match restarted. You are " + currentPlayer;
+          document.getElementById("btn-start-game").style.display = "none"; // Hide the start game button
+          document.getElementById("btn-exit-game").style.display = "block"; // Show the exit game button
+          document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button
+          document.getElementById("user-sidebar").classList.remove("open"); // Hide the sidebar
+        }
 
         async function handleClick(event) {
           if (!currentPlayer || gameOver) return;
@@ -315,25 +895,49 @@
           const x = event.clientX - rect.left;
           const y = event.clientY - rect.top;
 
-          const col = Math.floor(x / cellSize);
-          const row = Math.floor(y / cellSize);
+          const col = Math.floor(x / CELL_SIZE);
+          const row = Math.floor(y / CELL_SIZE);
 
           if (!board[row][col]) {
             // send move to server!
-            if (!(await sendMove(row + "", col + "", currentPlayer))) {
+            if (!(await sendMove(row + "", col + "", currentGameId))) {
               return; // Move failed, do not proceed
             }
 
-            board[row][col] = currentPlayer;
-            animateMark(currentPlayer, col, row); // animate the growing mark
+            const isSetSuccess = setBoardCell(row, col, currentPlayer);
+            animateMark(board[row][col], col, row); // animate the growing mark
 
             const winner = checkWinnerFromLastMove(row, col); // check for winner (draw or win)
             if (winner) {
-              gameOver = true; // stop the game
-              document.getElementById("status").textContent =
-                winner === "draw" ? "It's a draw!" : `${winner} wins!`;
+              console.log(isSetSuccess);
+              isSetSuccess && (await handleGameEnded(winner)); // handle the end of the match
+              connection.invoke(
+                "EndMatch",
+                String(currentGameId ?? ""),
+                String(winner ?? ""),
+                board
+              ); // Send end match request to server
             }
           }
+        }
+
+        function handleGameEnded(winner) {
+          gameOver = true; // stop the game
+          const result = winner === "draw" ? "It's a draw!" : `${winner} wins!`;
+          document.getElementById("status").textContent = result; // show the result
+          alert(result); // show the result in an alert
+          document.getElementById("btn-reset-game").style.display = "block"; // Show the start game button again
+          document.getElementById("btn-exit-game").style.display = "none"; // Hide the exit game button
+          document.getElementById("btn-start-game").style.display = "block"; // Hide the start game button
+          document.getElementById("user-sidebar").classList.add("open"); // Hide the sidebar
+        }
+
+        function setBoardCell(row, col, mark) {
+          if (lock || board[row][col]) return false; // Prevent setting the cell if the game is locked
+          lock = true; // Lock the game to prevent multiple clicks)
+          board[row][col] = mark;
+          lock = false; // Unlock the game after setting the cell
+          return true; // Cell set successfully
         }
       })();
     </script>

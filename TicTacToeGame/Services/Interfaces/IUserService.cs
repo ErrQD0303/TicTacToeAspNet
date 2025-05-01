@@ -5,6 +5,7 @@ namespace TicTacToeGame.Services.Interfaces;
 
 public interface IUserService
 {
-    Task<bool> LoginAsync(string username, string password);
+    Task<LoggedInUserDto?> LoginAsync(string username, string password);
     Task<bool> RegisterAsync(RegisterUserDto dto);
+    Task<GetUserDto?> GetUserByIdAsync(string id);
 }

@@ -4,5 +4,4 @@ namespace TicTacToeGame.Services;
 
 public class TicTacToeMatchHistoryService : ITicTacToeMatchHistoryService
 {
-
 }

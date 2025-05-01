@@ -21,6 +21,7 @@ public class ServiceHostingStartup : IHostingStartup
             services.AddTransient<IUserService, UserService>();
             services.AddTransient<ITicTacToeMatchService, TicTacToeMatchService>();
             services.AddTransient<ITicTacToeMatchHistoryService, TicTacToeMatchHistoryService>();
+            services.AddTransient<ITokenService, TokenService>();
 
             services.AddTransient<IUnitOfWork, UnitOfWork>();
         });

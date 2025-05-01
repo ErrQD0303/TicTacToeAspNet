@@ -1,34 +1,34 @@
 using System.Text.Json.Serialization;
 
-namespace TicTacToeGame.Models.Responses.Interfaces;
+namespace TicTacToeGame.Models.Responses;
 
-public interface IResponse
+public class Response
 {
     /// <summary>
     /// Indicates whether the operation was successful.
     /// </summary>
     [JsonPropertyName("success")]
-    bool Success { get; set; }
+    public bool Success { get; set; }
 
     /// <summary>
     /// Contains any error messages related to the operation.
     /// </summary>
     [JsonPropertyName("message")]
-    string Message { get; set; }
+    public string Message { get; set; } = default!;
 
     /// <summary>
     /// Contains any additional error details related to the operation.
     /// </summary>
     [JsonPropertyName("errors")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    Dictionary<string, string>? Errors { get; set; }
+    public Dictionary<string, string>? Errors { get; set; }
 }
 
-public interface IResponse<T> : IResponse where T : class
+public class Response<T> : Response where T : class
 {
     /// <summary>
     /// Contains the data returned from the operation.
     /// </summary>
     [JsonPropertyName("data")]
-    T Data { get; set; }
+    public T? Data { get; set; }
 }

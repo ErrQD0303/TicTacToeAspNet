@@ -65,7 +65,6 @@ public class AppDbContext : DbContext
             e.Property(e => e.Player1Id).IsRequired().HasMaxLength(100);
             e.Property(e => e.Player2Id).IsRequired().HasMaxLength(100);
             e.Property(e => e.IsPlayer1Turn).IsRequired();
-            e.Property(e => e.TicTacToeMatchHistoryId).IsRequired().HasMaxLength(100);
         });
 
         modelBuilder.Entity<TicTacToeMatchHistory>(e =>

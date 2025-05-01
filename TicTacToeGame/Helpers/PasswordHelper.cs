@@ -1,23 +1,24 @@
 using Microsoft.AspNetCore.Identity;
 using TicTacToeGame.Models;
+using TicTacToeGame.Models.Dtos.Users;
 
 namespace TicTacToeGame.Helpers;
 
 public class PasswordHelper
 {
-    public static PasswordHasher<AppUser> PasswordHasher { get; private set; }
+    public static PasswordHasher<HashPasswordUserDto> PasswordHasher { get; private set; }
 
     static PasswordHelper()
     {
-        PasswordHasher = new PasswordHasher<AppUser>();
+        PasswordHasher = new PasswordHasher<HashPasswordUserDto>();
     }
 
-    public static string HashPassword(AppUser user, string password)
+    public static string HashPassword(HashPasswordUserDto user, string password)
     {
         return PasswordHasher.HashPassword(user, password);
     }
 
-    public static bool VerifyPassword(AppUser user, string password, string hashedPassword)
+    public static bool VerifyPassword(HashPasswordUserDto user, string password, string hashedPassword)
     {
         var result = PasswordHasher.VerifyHashedPassword(user, hashedPassword, password);
         return result == PasswordVerificationResult.Success || result == PasswordVerificationResult.SuccessRehashNeeded;

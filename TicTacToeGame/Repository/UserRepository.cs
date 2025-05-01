@@ -87,4 +87,15 @@ public class UserRepository : IUserRepository
     {
         return Context.Users.AnyAsync(u => u.UserName == username && u.HashedPassword == hashedPassword);
     }
+
+    public Task<int> SaveChangesAsync()
+    {
+        return Context.SaveChangesAsync();
+    }
+
+    public Task<AppUser?> GetByUsernameAsync(string username, bool trackChanges = false)
+    {
+        return GetQuery(trackChanges)
+            .FirstOrDefaultAsync(u => u.UserName == username);
+    }
 }

@@ -7,13 +7,20 @@ public class CorsHostingStartup : IHostingStartup
     {
         builder.ConfigureServices((context, services) =>
         {
+            var corsOrigin = Environment.GetEnvironmentVariable("CORS_ORIGIN");
+            if (string.IsNullOrEmpty(corsOrigin))
+            {
+                throw new ArgumentNullException("CORS_ORIGIN environment variable is not set.");
+            }
             services.AddCors(options =>
             {
-                options.AddDefaultPolicy(policy =>
+                options.AddPolicy("LocalhostPolicy", policy =>
                 {
                     policy.AllowAnyHeader()
                         .AllowAnyMethod()
-                        .AllowAnyOrigin();
+                        .AllowCredentials() // Allow credentials for SignalR and other requests
+                        .WithOrigins(corsOrigin.Split(',').Select(o => o.Trim()).ToArray()
+                        );
                 });
             });
         });

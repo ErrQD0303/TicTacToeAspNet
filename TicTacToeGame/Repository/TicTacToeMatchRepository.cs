@@ -15,9 +15,10 @@ public class TicTacToeMatchRepository : ITicTacToeMatchRepository
         Context = context;
     }
 
-    public Task AddAsync(TicTacToeMatch entity)
+    public async Task AddAsync(TicTacToeMatch entity)
     {
-        return Task.FromResult(Context.Add(entity));
+        await Context.AddAsync(entity);
+        await Context.AddAsync(entity.TicTacToeMatchHistory);
     }
 
     public Task DeleteAsync(TicTacToeMatch entity)
@@ -81,5 +82,10 @@ public class TicTacToeMatchRepository : ITicTacToeMatchRepository
     public Task<bool> ExistsAsync(string id)
     {
         return Task.FromResult(Context.TicTacToeMatches.Any(u => u.Id == id));
+    }
+
+    public Task<int> SaveChangesAsync()
+    {
+        return Context.SaveChangesAsync();
     }
 }

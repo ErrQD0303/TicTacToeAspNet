@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using TicTacToeGame.Models.Dtos.TicTacToeMatches;
 
-namespace TicTacToeGame.Services.Interfaces
+namespace TicTacToeGame.Services.Interfaces;
+
+public interface ITicTacToeMatchService
 {
-    public interface ITicTacToeMatchService
-    {
-        
-    }
+    Task<CreatedTicTacToeMatchDto> AddAsync(CreateTicTacToeMatchDto entity);
 }

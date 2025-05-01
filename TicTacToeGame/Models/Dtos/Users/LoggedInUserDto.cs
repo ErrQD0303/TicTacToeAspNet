@@ -1,6 +1,6 @@
 namespace TicTacToeGame.Models.Dtos.Users;
 
-public class GetUserDto
+public class LoggedInUserDto
 {
     public string Id { get; set; } = default!;
     public string UserName { get; set; } = default!;
