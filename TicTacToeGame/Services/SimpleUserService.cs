@@ -12,15 +12,20 @@ public class SimpleUserService : ISimpleUserService
         return Task.FromResult(Users.FirstOrDefault(u => u.Name == name) ?? null);
     }
 
-    public Task<SimpleUser> GetUserByIdAsync(string id)
+    public Task<SimpleUser?> GetUserByIdAsync(string id)
     {
-        var user = Users.FirstOrDefault(u => u.Id == id) ?? throw new Exception("User not found");
+        var user = Users.FirstOrDefault(u => u.Id == id) ?? null;
         return Task.FromResult(user);
+    }
+
+    public Task<bool> IsUserStillAvaiable(string userId)
+    {
+        return Task.FromResult(Users.Any(u => u != null && u.Id == userId && !string.IsNullOrEmpty(u.Name)));
     }
 
     public Task<SimpleUser> LoginAsync(string id)
     {
-        var isUserExists = Users.Any(u => u.Id == id);
+        var isUserExists = Users.Any(u => u != null && u.Id == id);
         if (!isUserExists)
         {
             var newUser = new SimpleUser

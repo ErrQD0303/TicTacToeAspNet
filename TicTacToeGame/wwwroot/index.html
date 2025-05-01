@@ -191,9 +191,7 @@
       </form>
     </div>
 
-    <button id="sidebar-toggle" style="display: none" onclick="toggleSidebar()">
-      ☰
-    </button>
+    <button id="sidebar-toggle" style="display: none">☰</button>
 
     <div id="user-sidebar" class="open" style="display: none">
       <h3>User Info</h3>
@@ -224,12 +222,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script>
       (async () => {
+        // Update this to your backend URL, in reality you will first deploy the backend, then you will need to update this URL to the backend URL, and then deploy the frontend, so that it can access the backend.
         // const backendUrl =
-        //   "tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net"; // Update this to your backend URL, in reality you will first deploy the backend, then you will need to update this URL to the backend URL, and then deploy the frontend, so that it can access the backend.
-        const backendUrl =
-          "tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net";
+        //   "tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net";
+        // const backendUrl =
+        "https://tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net"; // Localhost URL for development
+        // const backendUrl = "https://localhost:7194"; // Localhost URL for development
         let currentUser = null;
         let token = null; // Store the token here
+
+        document
+          .getElementById("sidebar-toggle")
+          .addEventListener("click", toggleSidebar); // Add event listener for sidebar toggle button
 
         function toggleSidebar() {
           document.getElementById("user-sidebar").classList.toggle("open");
@@ -243,6 +247,10 @@
           if (username) {
             try {
               const connection = await getSignalRConnection();
+              if (!connection) {
+                alert("Failed to connect to the server. Please try again.");
+                return;
+              }
               await connection.invoke("SetName", username); // Send login request to server
             } catch (error) {
               console.error("Error during login:", error);
@@ -282,7 +290,28 @@
 
         document.getElementById("btn-logout").addEventListener("click", logout); // Add event listener for logout button
 
-        function logout() {
+        async function logout() {
+          let name;
+          try {
+            name = currentUser.name;
+            if (!name) {
+              alert("You are not logged in.");
+              currentUser = null;
+              token = null; // Clear the token
+              updateAuthUI();
+              return;
+            }
+            const connection = await getSignalRConnection();
+            if (!connection) {
+              alert("Failed to connect to the server. Please try again.");
+              return;
+            }
+            await connection.invoke("Logout", name); // Send logout request to server
+          } catch (error) {
+            console.error("Error during logout:", error);
+            alert("Logout failed. Please try again.");
+            return;
+          }
           currentUser = null;
           token = null; // Clear the token
           updateAuthUI();
@@ -296,7 +325,6 @@
           const toggleBtn = document.getElementById("sidebar-toggle");
 
           if (token) {
-            console.log(currentUser);
             authContainer.style.display = "none";
             loginForm.style.display = "none";
             welcomeMessage.textContent = `Welcome, ${currentUser.name}`;
@@ -370,6 +398,12 @@
 
         async function findGame() {
           try {
+            const connection = await getSignalRConnection();
+
+            if (!connection) {
+              alert("Failed to connect to the server. Please try again.");
+              return;
+            }
             await connection.invoke("FindGame", boardSize, boardSize);
           } catch (err) {
             // Handle the response from the server if needed
@@ -662,9 +696,15 @@
 
         let cacheConnection = null; // Cache the connection to avoid creating multiple connections
         async function getSignalRConnection() {
-          if (cacheConnection && cacheConnection.state === 1) {
+          if (
+            cacheConnection &&
+            cacheConnection.state === signalR.HubConnectionState.Connected
+          ) {
             return cacheConnection; // Return the cached connection if it exists
           }
+
+          cacheConnection?.stop(); // Stop the existing connection if it's not null and not connected
+          // Create a new connection if it doesn't exist or is not connected
           cacheConnection = new signalR.HubConnectionBuilder()
             .withUrl(`${backendUrl}/hubs/gamehub`, {
               withCredentials: true, // ✅ important
@@ -673,25 +713,29 @@
 
           try {
             await cacheConnection.start();
+            // Listen to moves from other players
+            cacheConnection.on("ReceiveMove", ReceiveMove);
+            cacheConnection.on("ReceiveExitMatch", ReceiveExitMatch);
+            cacheConnection.on("ReceiveMatchFound", ReceiveMatchFound);
+            cacheConnection.on(
+              "ReceiveUserAlreadyInAMatch",
+              ReceiveUserAlreadyInAMatch
+            );
+            cacheConnection.on("ReceiveMatchRestart", ReceiveMatchRestart);
+            cacheConnection.on("ReceiveSetNameSuccess", ReceiveSetNameSuccess); // Listen to SetName success event
           } catch (err) {
             console.error(err);
+            return null; // Connection failed
           }
-
-          // Listen to moves from other players
-          cacheConnection.on("ReceiveMove", ReceiveMove);
-          cacheConnection.on("ReceiveExitMatch", ReceiveExitMatch);
-          cacheConnection.on("ReceiveMatchFound", ReceiveMatchFound);
-          cacheConnection.on(
-            "ReceiveUserAlreadyInAMatch",
-            ReceiveUserAlreadyInAMatch
-          );
-          cacheConnection.on("ReceiveMatchRestart", ReceiveMatchRestart);
-          cacheConnection.on("ReceiveSetNameSuccess", ReceiveSetNameSuccess); // Listen to SetName success event
 
           return cacheConnection; // Return the new connection
         }
 
         const connection = await getSignalRConnection();
+        if (!connection) {
+          alert("Failed to connect to the server. Please try again.");
+          return;
+        }
 
         async function SetName(name) {
           try {
@@ -869,6 +913,13 @@
           lock = false; // Unlock the game after setting the cell
           return true; // Cell set successfully
         }
+
+        document.addEventListener("unload", async () => {
+          if (connection) {
+            await connection.invoke("Logout", currentUser.name); // Send logout request to server
+            await connection.stop(); // Stop the connection when the page is unloaded
+          }
+        });
       })();
     </script>
   </body>

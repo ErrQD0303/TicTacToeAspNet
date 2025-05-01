@@ -28,6 +28,18 @@ public class GameHub : Hub<IGameHubClient>
         await Users.LoginAsync(Context.ConnectionId);
     }
 
+    public async Task Logout(string name)
+    {
+        var userId = Context.ConnectionId;
+        var user = await Users.FirstOrDefaultUserWithNameAsync(name);
+        if (user == null)
+        {
+            Logger.LogWarning("User not found: {UserId}", userId);
+            throw new HubException("User not found.");
+        }
+        user.Name = string.Empty;
+    }
+
     public async Task SetName(string name)
     {
         var existedUser = await Users.FirstOrDefaultUserWithNameAsync(name);
@@ -38,6 +50,11 @@ public class GameHub : Hub<IGameHubClient>
         }
 
         var currentUser = await Users.GetUserByIdAsync(Context.ConnectionId);
+        if (currentUser == null)
+        {
+            Logger.LogWarning("User not found: {UserId}", Context.ConnectionId);
+            throw new HubException("User not found.");
+        }
         currentUser.Name = name;
         await Clients.Caller.ReceiveSetNameSuccess(currentUser.Id, currentUser.Name);
     }
@@ -46,7 +63,6 @@ public class GameHub : Hub<IGameHubClient>
     {
         await base.OnDisconnectedAsync(exception);
 
-        await Users.RemoveAllAsync(Context.ConnectionId);
         var matches = CurrentMatches.Where(m => (m.Player1Id == Context.ConnectionId || m.Player2Id == Context.ConnectionId) && m.Result == MatchResult.Ongoing).ToList();
         var user = await Users.GetUserByIdAsync(Context.ConnectionId);
         if (user == null)
@@ -54,8 +70,12 @@ public class GameHub : Hub<IGameHubClient>
             Logger.LogWarning("User not found: {UserId}", Context.ConnectionId);
             return;
         }
+
+        await Users.RemoveAllAsync(user.Id);
         foreach (var match in matches)
         {
+            match.Result = match.Player1Id == Context.ConnectionId ? MatchResult.Player2Win : MatchResult.Player1Win;
+            Logger.LogInformation("User {0} and {1} exited match {MatchId}", match.Player1Id, match.Player2Id, match.Id);
             await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveExitMatch(match.Player1Id, $"Player {user.Name} exited the match");
         }
     }
@@ -79,40 +99,67 @@ public class GameHub : Hub<IGameHubClient>
 
         Logger.LogInformation("User {UserId} is looking for a game", currentUser.Id);
 
-        var findingMatch = CurrentMatches.FirstOrDefault(m => string.IsNullOrEmpty(m.Player2Id));
-        if (findingMatch != null)
+        FindGameQueue.Enqueue(currentUser);
+
+        if (FindGameQueue.Count < 2)
         {
-            var random = _random.Next(0, 2);
-            if (random == 0)
-            {
-                findingMatch.Player2Id = findingMatch.Player1Id;
-                findingMatch.Player1Id = currentUser.Id;
-            }
-            else
-            {
-                findingMatch.Player2Id = currentUser.Id;
-            }
-            findingMatch.IsPlayer1Turn = true;
-            var player1 = await Users.GetUserByIdAsync(findingMatch.Player1Id);
-            var player2 = await Users.GetUserByIdAsync(findingMatch.Player2Id);
-            await Clients.Clients(findingMatch.Player1Id).ReceiveMatchFound(player1?.Name ?? "", findingMatch.Id.ToString(), findingMatch.Row, findingMatch.Column);
-            await Clients.Clients(findingMatch.Player2Id).ReceiveMatchFound(player2?.Name ?? "", findingMatch.Id.ToString(), findingMatch.Row, findingMatch.Column);
+            Logger.LogInformation("User {UserId} is waiting for a game", currentUser.Id);
             return;
         }
 
-        var newMatch = new SimpleMatch
+        if (!FindGameQueue.TryDequeue(out var player1) || !FindGameQueue.TryDequeue(out var player2))
+        {
+            Logger.LogWarning("Match creation failed due to queue issues.");
+            // This should rarely happen, but safe to handle
+            if (player1 != null) FindGameQueue.Enqueue(player1);
+            return;
+        }
+
+        if (player1.Id == player2.Id)
+        {
+            Logger.LogWarning("Match creation failed: both players are the same.");
+            FindGameQueue.Enqueue(player1);
+            return;
+        }
+
+        var random = _random.Next(0, 2) == 0;
+
+        var match = new SimpleMatch
         {
             Id = Guid.NewGuid().ToString(),
             Row = row,
             Column = column,
-            Player1Id = currentUser.Id,
+            Player1Id = random ? player1.Id : player2.Id,
+            Player2Id = random ? player2.Id : player1.Id,
             IsPlayer1Turn = true,
             Result = MatchResult.Ongoing,
-            Winner = string.Empty,
+            Winner = string.Empty
         };
 
-        CurrentMatches.Add(newMatch);
+        var player1StillEligible = await IsUserStillAvailable(player1.Id);
+        var player2StillEligible = await IsUserStillAvailable(player2.Id);
+
+        if (!player1StillEligible || !player2StillEligible)
+        {
+            Logger.LogWarning("One of the players is no longer available: {Player1Id}, {Player2Id}", player1.Id, player2.Id);
+            if (player1StillEligible) FindGameQueue.Enqueue(player1);
+            if (player2StillEligible) FindGameQueue.Enqueue(player2);
+            return;
+        }
+
+        CurrentMatches.Add(match);
+        Logger.LogInformation("Match created: {MatchId} between {Player1Id} and {Player2Id}", match.Id, match.Player1Id, match.Player2Id);
+
+        await Clients.Clients(match.Player1Id).ReceiveMatchFound(player1?.Name ?? "", match.Id.ToString(), match.Row, match.Column);
+        await Clients.Clients(match.Player2Id).ReceiveMatchFound(player2?.Name ?? "", match.Id.ToString(), match.Row, match.Column);
         return;
+    }
+
+    private async Task<bool> IsUserStillAvailable(string userId)
+    {
+        var IsUserStillAvaiable = await Users.IsUserStillAvaiable(userId);
+        var IsUserInMatch = CurrentMatches.Any(m => (m.Player1Id == userId || m.Player2Id == userId) && m.Result == MatchResult.Ongoing);
+        return IsUserStillAvaiable && !IsUserInMatch;
     }
 
     public Task EndMatch(string matchId, string winner, string[][] board)
