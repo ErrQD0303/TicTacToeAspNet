@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" /> -->
+    <title>Caro (10x10)</title>
+    <style>
+      body {
+        text-align: center;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      canvas {
+        border: 2px solid #333;
+        display: block;
+        margin: 20px auto;
+        background: #fafafa;
+        cursor: pointer;
+      }
+
+      #auth-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 400px;
+        width: 90%;
+        padding: 20px;
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        background-color: #fff;
+        z-index: 10;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .auth-form {
+        margin-bottom: 20px;
+      }
+
+      .auth-form input {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0;
+        box-sizing: border-box;
+      }
+
+      .auth-form button {
+        width: 100%;
+        padding: 8px;
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .auth-form button:hover {
+        background-color: #2563eb;
+      }
+
+      #switch-to-register {
+        display: block;
+        margin-top: 10px;
+        color: #3b82f6;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+
+      #user-sidebar {
+        position: fixed;
+        top: 0;
+        left: -100vw; /* Hidden by default */
+        height: 100vh;
+        width: 250px;
+        background-color: #e0f2fe;
+        border-right: 2px solid #93c5fd;
+        padding: 20px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        transition: left 0.3s ease;
+        z-index: 1000;
+        gap: 10px;
+      }
+
+      #user-sidebar.open {
+        left: 0;
+      }
+
+      #user-sidebar h3 {
+        margin-top: 0;
+        color: #1e3a8a;
+        font-size: 1.2rem;
+      }
+
+      #user-sidebar #welcome-message {
+        font-weight: bold;
+        margin-bottom: 20px;
+        display: block;
+      }
+
+      #user-sidebar button {
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        padding: 10px;
+        width: 100%;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      #user-sidebar button:hover {
+        background-color: #2563eb;
+      }
+
+      #sidebar-toggle {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1100;
+        background-color: #3b82f6;
+        color: white;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 20px;
+        cursor: pointer;
+      }
+
+      .game-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        overflow: scroll;
+      }
+      #board-size-controls {
+        margin: 10px auto;
+        margin-top: 20px;
+        font-size: 16px;
+      }
+
+      #board-size {
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #333;
+        margin-left: 10px;
+      }
+
+      #online-users-section {
+        margin-top: 20px;
+      } /* Online Users Sidebar */
+
+      #online-users-toggle {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1100;
+        background-color: #3b82f6;
+        color: white;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 20px;
+        cursor: pointer;
+      }
+
+      #online-users-sidebar {
+        position: fixed;
+        top: 0;
+        right: -100vw; /* Hidden by default */
+        height: 100vh;
+        width: 250px;
+        background-color: #e0f2fe;
+        border-left: 2px solid #93c5fd;
+        padding: 20px;
+        box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+        transition: right 0.3s ease;
+        z-index: 1000;
+      }
+
+      #online-users-sidebar.open {
+        right: 0;
+      }
+
+      /* Remove the online users section from the left sidebar */
+      #online-users-section {
+        display: none;
+      }
+
+      /* Online Users List Styles */
+      .online-users-list {
+        margin-top: 15px;
+        text-align: left; /* Align names to the left */
+      }
+
+      .online-users-list > div {
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 14px;
+        border-bottom: 1px solid #dbeafe;
+      }
+
+      .online-users-list > div:last-child {
+        border-bottom: none;
+      }
+
+      /* Green circle before each name */
+      .online-users-list > div::before {
+        content: "";
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background-color: #22c55e; /* green color */
+        border-radius: 50%;
+        margin-right: 10px;
+        flex-shrink: 0; /* Prevent the circle from shrinking */
+      }
+
+      /* Add some padding to the right sidebar */
+      #online-users-sidebar {
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      /* Add hover effect to user items */
+      .online-users-list > div:hover {
+        background-color: #dbeafe;
+        border-radius: 4px;
+        padding-left: 8px;
+        margin-left: -8px;
+        cursor: default;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 600px) {
+        #online-users-toggle {
+          padding: 14px 20px;
+          font-size: 24px;
+        }
+
+        #online-users-sidebar {
+          width: 90vw;
+          font-size: 16px;
+          padding: 15px;
+        }
+      }
+
+      /* Larger button on mobile */
+      @media (max-width: 600px) {
+        #sidebar-toggle {
+          padding: 14px 20px;
+          font-size: 24px;
+        }
+
+        #user-sidebar {
+          width: 90vw;
+          font-size: 16px;
+          padding: 15px;
+          top: 0;
+          left: -100vw; /* Hidden by default */
+        }
+
+        #user-sidebar button {
+          font-size: 16px;
+          padding: 12px;
+        }
+
+        #user-sidebar h3 {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="auth-container">
+      <form id="login-form" class="auth-form">
+        <h3>Login</h3>
+        <input type="text" id="login-username" placeholder="Your Name" />
+        <button id="login-btn" type="button">Login</button>
+      </form>
+    </div>
+
+    <button id="sidebar-toggle" style="display: none">☰</button>
+
+    <div id="user-sidebar" class="open" style="display: none">
+      <h3>User Info</h3>
+      <span id="welcome-message"></span>
+      <!-- Add this below the <h1> title -->
+      <div id="board-size-controls">
+        <label for="board-size">Board Size:</label>
+        <select id="board-size">
+          <option value="3" selected>3x3</option>
+          <option value="10">10x10</option>
+          <option value="15">15x15</option>
+          <option value="20">20x20</option>
+          <option value="25">25x25</option>
+        </select>
+      </div>
+      <button id="btn-start-game" style="display: block">Find Game</button>
+      <button id="btn-exit-game" style="display: none">Exit Game</button>
+      <button id="btn-reset-game" style="display: none">Reset Game</button>
+      <button id="btn-logout">Logout</button>
+    </div>
+
+    <!-- Add this new button for the online users sidebar -->
+    <button id="online-users-toggle" style="display: none">👥</button>
+
+    <!-- Add this new right sidebar for online users -->
+    <div id="online-users-sidebar">
+      <h3>Online Users</h3>
+      <div id="online-users" class="online-users-list"></div>
+    </div>
+
+    <h1 id="app-header">Caro (10x10)</h1>
+    <div id="canvas-container">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+    <p id="status"></p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+      (async () => {
+        // Update this to your backend URL, in reality you will first deploy the backend, then you will need to update this URL to the backend URL, and then deploy the frontend, so that it can access the backend.
+        // const backendUrl =
+        //   "tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net";
+        // const backendUrl =
+        //   "https://tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net"; // Localhost URL for development
+        let isLocalhost = false; // Flag to check if running on localhost
+        if (location.hostname in ["localhost", "127.0.0.1"]) {
+          isLocalhost = true; // Set the flag to true if running on localhost
+        }
+        const backendUrl = isLocalhost
+          ? "https://localhost:7194"
+          : "https://tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net";
+        let currentUser = null;
+        let token = null; // Store the token here
+        let previousMark = {
+          row: -1,
+          col: -1,
+        };
+
+        // Add this near your other toggle functionality
+        document
+          .getElementById("online-users-toggle")
+          .addEventListener("click", toggleOnlineUsersSidebar);
+
+        function toggleOnlineUsersSidebar() {
+          document
+            .getElementById("online-users-sidebar")
+            .classList.toggle("open");
+        }
+
+        document
+          .getElementById("sidebar-toggle")
+          .addEventListener("click", toggleSidebar); // Add event listener for sidebar toggle button
+
+        function toggleSidebar() {
+          document.getElementById("user-sidebar").classList.toggle("open");
+        }
+
+        document.getElementById("login-btn").addEventListener("click", login);
+
+        async function login() {
+          const username = document.getElementById("login-username").value;
+          if (!username) {
+            return;
+          }
+          try {
+            const connection = await getSignalRConnection();
+            if (!connection) {
+              alert("Failed to connect to the server. Please try again.");
+              return;
+            }
+            await connection.invoke("SetName", username); // Send login request to server
+          } catch (error) {
+            console.error("Error during login:", error);
+            alert("Login failed. Please try again.");
+            return;
+          }
+
+          token = true;
+          updateAuthUI(); // Update the UI to show the logged-in state
+        }
+
+        async function retrieveUserInfo() {
+          try {
+            const response = await fetch(
+              `${backendUrl}/api/identity/userinfo`, // Update this to your backend URL
+              {
+                method: "GET",
+                headers: {},
+                credentials: "include",
+              }
+            );
+            if (response.ok) {
+              const responseBody = await response.json();
+              const data = responseBody.data;
+              currentUser = {
+                ...data,
+              }; // Assuming the API returns the username in the response
+              return data;
+            }
+            throw new Error(data.message);
+          } catch (error) {
+            console.error("Error fetching user info:", error);
+            currentUser = null;
+          }
+        }
+
+        document.getElementById("btn-logout").addEventListener("click", logout); // Add event listener for logout button
+
+        async function logout() {
+          let name;
+          try {
+            name = currentUser.name;
+            if (!name) {
+              alert("You are not logged in.");
+              currentUser = null;
+              token = null; // Clear the token
+              updateAuthUI();
+              return;
+            }
+            const connection = await getSignalRConnection();
+            if (!connection) {
+              alert("Failed to connect to the server. Please try again.");
+              return;
+            }
+            await connection.invoke("Logout", name); // Send logout request to server
+          } catch (error) {
+            console.error("Error during logout:", error);
+            alert("Logout failed. Please try again.");
+            return;
+          }
+          currentUser = null;
+          token = null; // Clear the token
+          updateAuthUI();
+        }
+
+        function updateAuthUI() {
+          const authContainer = document.getElementById("auth-container");
+          const loginForm = document.getElementById("login-form");
+          const welcomeMessage = document.getElementById("welcome-message");
+          const userSidebar = document.getElementById("user-sidebar");
+          const toggleBtn = document.getElementById("sidebar-toggle");
+          const onlineUsersToggle = document.getElementById(
+            "online-users-toggle"
+          );
+
+          if (token) {
+            authContainer.style.display = "none";
+            loginForm.style.display = "none";
+            welcomeMessage.textContent = `Welcome, ${currentUser.name}`;
+            toggleBtn.style.display = "block"; // Show the toggle button
+            userSidebar.style.display = "flex"; // Show the sidebar
+            onlineUsersToggle.style.display = "block";
+          } else {
+            authContainer.style.display = "block";
+            loginForm.style.display = "block";
+            onlineUsersToggle.style.display = "none";
+            toggleBtn.style.display = "none"; // Hide the toggle button
+            userSidebar.style.display = "none"; // Hide the sidebar
+            document
+              .getElementById("online-users-sidebar")
+              .classList.remove("open");
+          }
+        }
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let boardSize = 3;
+        const appHeader = document.getElementById("app-header");
+        document.title =
+          appHeader.textContent = `Caro (${boardSize}x${boardSize})`;
+
+        let CELL_SIZE = 50; // Size of each cell in pixels
+        // Dynamically size canvas based on number of cellsnumber of cells
+        resizeCanvas(); // Set initial size based on cell size and number of cells
+        // If you want it to scale to the screen (responsive):
+
+        let board = Array.from({ length: boardSize }, () =>
+          Array(boardSize).fill("")
+        );
+        let lock = false;
+        // let currentPlayer = "X";
+        let currentPlayer;
+        let currentGameId = null; // Store the current game ID
+        let gameOver = false;
+
+        let hoverCell = { row: -1, col: -1 }; // Add this function to handle size changes
+        document
+          .getElementById("board-size")
+          .addEventListener("change", changeBoardSize);
+
+        document
+          .getElementById("btn-reset-game")
+          .addEventListener("click", async () => {
+            const sizeSelect = document.getElementById("board-size");
+            sizeSelect.value = boardSize; // Set the new board size from the select element
+            const row = parseInt(sizeSelect.value); // Get the new board size from the select element
+            const column = parseInt(sizeSelect.value); // Get the new board size from the select element
+            await connection.invoke("Restart", currentGameId, row, column); // Send reset game request to server
+            document.getElementById("status").textContent = ""; // Clear status message
+          });
+
+        document
+          .getElementById("btn-start-game")
+          .addEventListener("click", findGame);
+
+        document
+          .getElementById("btn-exit-game")
+          .addEventListener("click", exitGame);
+
+        async function exitGame() {
+          try {
+            await connection.invoke("ExitMatch", currentGameId); // Send exit game request to server
+            currentGameId = null; // Reset the game ID
+            document.getElementById("status").textContent = "Exited game.";
+            document.getElementById("btn-start-game").style.display = "block"; // Show the start game button again
+            document.getElementById("btn-exit-game").style.display = "none"; // Hide the exit game button
+            document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button again
+          } catch (err) {
+            console.error(err.toString());
+          }
+        }
+
+        async function findGame() {
+          try {
+            const connection = await getSignalRConnection();
+
+            if (!connection) {
+              alert("Failed to connect to the server. Please try again.");
+              return;
+            }
+            await connection.invoke("FindGame", boardSize, boardSize);
+          } catch (err) {
+            // Handle the response from the server if needed
+            console.error(err.toString());
+          }
+        }
+
+        async function changeBoardSize() {
+          const sizeSelect = document.getElementById("board-size");
+          boardSize = parseInt(sizeSelect.value);
+          await resetGame();
+          const row = parseInt(boardSize); // Get the new board size from the select element
+          const column = parseInt(boardSize); // Get the new board size from the select element
+          await connection.invoke("Restart", currentGameId, row, column); // Send reset game request to server
+        }
+
+        async function resetGame(newBoardSize) {
+          // Clear the current game state
+          boardSize = parseInt(document.getElementById("board-size").value); // Get the new board size from the select element
+          board = Array.from({ length: boardSize }, () =>
+            Array(boardSize).fill("")
+          );
+          gameOver = false;
+          currentPlayer = await GetMark();
+
+          // Update the title
+          document.title = document.getElementById(
+            "app-header"
+          ).textContent = `Caro (${boardSize}x${boardSize})`;
+
+          // Resize the canvas
+          resizeCanvas();
+
+          // Redraw the board
+          drawBoard();
+
+          // Clear status message
+          document.getElementById("status").textContent = "";
+          document.getElementById("btn-start-game").style.display = "none"; // Show the start game button again
+          document.getElementById("btn-exit-game").style.display = "block"; // Hide the exit game button
+          document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button again
+        }
+
+        function resizeCanvas() {
+          CELL_SIZE = 50; // Default cell size
+          // if (CELL_SIZE * boardSize > window.innerWidth) {
+          //   CELL_SIZE = window.innerWidth / boardSize; // Responsive size for smaller screens
+          // } else {
+          //   CELL_SIZE = 50;
+          // }
+          canvas.width = CELL_SIZE * boardSize;
+          canvas.height = CELL_SIZE * boardSize; // Set height based on cell size and
+        }
+
+        // Update canvas size based on window size and cell size
+        function drawBoard() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.strokeStyle = "#333";
+
+          for (let i = 0; i <= boardSize; i++) {
+            // Horizontal line
+            ctx.beginPath();
+            ctx.moveTo(0, i * CELL_SIZE);
+            ctx.lineTo(boardSize * CELL_SIZE, i * CELL_SIZE);
+            ctx.stroke();
+
+            // Vertical line
+            ctx.beginPath();
+            ctx.moveTo(i * CELL_SIZE, 0);
+            ctx.lineTo(i * CELL_SIZE, boardSize * CELL_SIZE);
+            ctx.stroke();
+          }
+
+          // Highlight hovered cell
+          if (
+            hoverCell.row >= 0 &&
+            hoverCell.row < boardSize &&
+            hoverCell.col >= 0 &&
+            hoverCell.col < boardSize &&
+            !board[hoverCell.row][hoverCell.col]
+          ) {
+            ctx.fillStyle = "rgba(100, 149, 237, 0.3)";
+            // Draw a rectangle from the top left point with cellSize wid and cellSize height
+            ctx.fillRect(
+              hoverCell.col * CELL_SIZE,
+              hoverCell.row * CELL_SIZE,
+              CELL_SIZE,
+              CELL_SIZE
+            );
+          }
+
+          // Draw X and O
+          for (let row = 0; row < boardSize; row++) {
+            for (let col = 0; col < boardSize; col++) {
+              const mark = board[row][col];
+              if (mark) {
+                const isLastMove =
+                  row === previousMark.row && col === previousMark.col;
+                drawMark(mark, col, row, isLastMove);
+              }
+            }
+          }
+        }
+
+        function drawMark(mark, col, row, highlight = false) {
+          const centerX = col * CELL_SIZE + CELL_SIZE / 2;
+          const centerY = row * CELL_SIZE + CELL_SIZE / 2;
+          const fontSize = CELL_SIZE * 0.6;
+
+          ctx.save();
+
+          // Draw background highlight if it's the latest move
+          if (highlight) {
+            ctx.fillStyle =
+              mark === "X"
+                ? "rgba(255, 51, 51, 0.15)" // light red background
+                : "rgba(51, 51, 255, 0.15)"; // light blue background
+            ctx.fillRect(
+              col * CELL_SIZE,
+              row * CELL_SIZE,
+              CELL_SIZE,
+              CELL_SIZE
+            );
+          }
+
+          ctx.translate(centerX, centerY);
+          ctx.font = `${fontSize}px Arial`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          ctx.fillStyle = mark === "X" ? "#ff3333" : "#3333ff";
+          ctx.fillText(mark, 0, 0);
+
+          ctx.restore();
+        }
+
+        // Animation when placing a move with a glow effect
+        function animateMark(mark, col, row) {
+          let scale = 0;
+          const targetScale = 1;
+          const centerX = col * CELL_SIZE + CELL_SIZE / 2;
+          const centerY = row * CELL_SIZE + CELL_SIZE / 2;
+          const maxFontSize = CELL_SIZE * 0.6;
+          const glowColor =
+            mark === "X" ? "rgba(255, 51, 51, 0.5)" : "rgba(51, 51, 255, 0.5)";
+
+          function animate() {
+            ctx.save(); // Save the current state
+            drawBoard(); // RedrawBoard();
+            ctx.translate(centerX, centerY); // Move the 0-0 point to the center of the mark cell
+            ctx.scale(scale, scale);
+
+            // Draw glow effect
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 20;
+            ctx.font = `${maxFontSize}px Arial`; // Set font size
+            ctx.textAlign = "center"; // center horizontally
+            ctx.textBaseline = "middle"; // center vertically
+            ctx.fillStyle = mark === "X" ? "#ff3333" : "#3333ff"; // set color
+            ctx.fillText(mark, 0, 0); // Draw the mark at the new 0-0 point
+            ctx.restore(); // Restore the state to the original, removing the translation
+
+            scale += 0.1; // Increase scale
+            if (scale <= targetScale) {
+              requestAnimationFrame(animate); // Continue animation
+              // This will simulate the animation of the mark growing from nothing to full size (1.0)
+            }
+          }
+          animate();
+        }
+
+        function animatePreviousMark(mark, col, row) {
+          let scale = 0;
+          const targetScale = 1;
+          const centerX = col * CELL_SIZE + CELL_SIZE / 2;
+          const centerY = row * CELL_SIZE + CELL_SIZE / 2;
+          const maxFontSize = CELL_SIZE * 0.6;
+
+          function animate() {
+            ctx.save(); // Save the current state
+            drawBoard(); // RedrawBoard();
+            ctx.translate(centerX, centerY); // Move the 0-0 point to the center of the mark cell
+            ctx.scale(scale, scale);
+            ctx.font = `${maxFontSize}px Arial`; // Set font size
+            ctx.textAlign = "center"; // center horizontally
+            ctx.textBaseline = "middle"; // center vertically
+            ctx.fillStyle = mark === "X" ? "#ff3333" : "#3333ff"; // set color
+            ctx.fillText(mark, 0, 0); // Draw the mark at the new 0-0 point
+            ctx.restore(); // Restore the state to the original, removing the translation
+
+            scale += 0.1; // Increase scale
+            if (scale <= targetScale) {
+              requestAnimationFrame(animate); // Continue animation
+              // This will simulate the animation of the mark growing from nothing to full size (1.0)
+            }
+          }
+          animate();
+        }
+
+        function checkWinnerFromLastMove(row, column) {
+          const needed = boardSize >= 10 ? 5 : 3; // 5 in a row to win for 10x10, 3 in a row to win for 3x3
+          const player = board[row][column];
+
+          if (!player) {
+            return null; // No player placed here, can't win
+          }
+
+          // Directions to check: [deltaRow, deltaColumn]
+          const directions = [
+            [0, 1], // horizontal →
+            [1, 0], // vertical ↓
+            [1, 1], // diagonal ↘
+            [1, -1], // diagonal ↙
+          ];
+
+          function countInDirection(deltaRow, deltaColumn) {
+            let count = 1; // Start with the current piece
+
+            // Check forward (positive direction)
+            let r = +row + deltaRow;
+            let c = +column + deltaColumn;
+            // Check if the next cell is within bounds and matches the player, if so, increase the count and move to the next cell, and so on until it doesn't match or is out of bounds
+            while (
+              r >= 0 &&
+              r < boardSize &&
+              c >= 0 &&
+              c < boardSize &&
+              board[r][c] === player
+            ) {
+              // If it matches, increase the count and move to the next cell
+              count++;
+              r += deltaRow;
+              c += deltaColumn;
+            }
+
+            // Check backward (negative direction)
+            r = row - deltaRow;
+            c = column - deltaColumn;
+            // Check if the next cell is within bounds and matches the player, if so, increase the count and move to the next cell, and so on until it doesn't match or is out of bounds
+            while (
+              r >= 0 &&
+              r < boardSize &&
+              c >= 0 &&
+              c < boardSize &&
+              board[r][c] === player
+            ) {
+              count++;
+              r -= deltaRow;
+              c -= deltaColumn;
+            }
+
+            return count;
+          }
+
+          for (const [deltaRow, deltaColumn] of directions) {
+            if (countInDirection(deltaRow, deltaColumn) >= needed) {
+              return player; // Winner found
+            }
+          }
+
+          // Flat the board to an array and check if all cells are filled
+          if (board.flat().every((cell) => cell)) {
+            return "draw";
+          }
+
+          // No winner found
+          return null;
+        }
+
+        function checkWinner() {
+          const needed = 5; // 5 in a row to win
+
+          // deltaRow: How much you move vertically each step
+          // deltaColumn: How much you move horizontally each step
+          function checkDirection(row, column, deltaRow, deltaColumn) {
+            let count = 0;
+            let player = board[row][column];
+            for (let i = 0; i < needed; i++) {
+              const newRow = row + deltaRow * i;
+              const newColumn = column + deltaColumn * i;
+              // Check for invalid indices and if the cell already checked by another player or is empty
+              if (
+                newRow < 0 ||
+                newColumn < 0 ||
+                newRow >= boardSize ||
+                newColumn >= boardSize ||
+                board[newRow][newColumn] !== player
+              ) {
+                return false;
+              }
+            }
+            return true;
+          }
+
+          for (let row = 0; row < boardSize; row++) {
+            for (let column = 0; column < boardSize; column++) {
+              if (board[row][column]) {
+                if (
+                  checkDirection(row, column, 1, 0) || // vertical down
+                  checkDirection(row, column, 0, 1) || // horizontal right
+                  checkDirection(row, column, 1, 1) || // diagonal down-right
+                  checkDirection(row, column, 1, -1) // diagonal down-left
+                ) {
+                  return board[row][column]; // return the winner
+                }
+              }
+            }
+          }
+
+          // Flat the board to an array and check if all cells are filled
+          if (board.flat().every((cell) => cell)) {
+            return "draw";
+          }
+
+          return null;
+        }
+
+        function handleMouseMove(event) {
+          if (!currentPlayer) {
+            return;
+          }
+
+          const rect = canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+
+          hoverCell.col = Math.min(
+            Math.max(0, Math.floor(x / CELL_SIZE)),
+            boardSize - 1
+          );
+          hoverCell.row = Math.min(
+            Math.max(0, Math.floor(y / CELL_SIZE)),
+            boardSize - 1
+          );
+        }
+
+        canvas.addEventListener("click", handleClick);
+        canvas.addEventListener("mousemove", handleMouseMove);
+
+        function gameLoop() {
+          drawBoard();
+          requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+
+        let cacheConnection = null; // Cache the connection to avoid creating multiple connections
+        async function getSignalRConnection() {
+          if (
+            cacheConnection &&
+            cacheConnection.state === signalR.HubConnectionState.Connected
+          ) {
+            return cacheConnection; // Return the cached connection if it exists
+          }
+
+          cacheConnection?.stop(); // Stop the existing connection if it's not null and not connected
+          // Create a new connection if it doesn't exist or is not connected
+          cacheConnection = new signalR.HubConnectionBuilder()
+            .withUrl(`${backendUrl}/hubs/gamehub`, {
+              withCredentials: true, // ✅ important
+            }) // <-- update this if local or hosted
+            .build();
+
+          try {
+            await cacheConnection.start();
+            // Listen to moves from other players
+            cacheConnection.on("ReceiveMove", ReceiveMove);
+            cacheConnection.on("ReceiveExitMatch", ReceiveExitMatch);
+            cacheConnection.on("ReceiveMatchFound", ReceiveMatchFound);
+            cacheConnection.on(
+              "ReceiveUserAlreadyInAMatch",
+              ReceiveUserAlreadyInAMatch
+            );
+            cacheConnection.on("ReceiveMatchRestart", ReceiveMatchRestart);
+            cacheConnection.on("ReceiveSetNameSuccess", ReceiveSetNameSuccess); // Listen to SetName success event
+            cacheConnection.on("DisplayOnlineUsers", displayOnlineUsers); // Listen to online users event
+          } catch (err) {
+            console.error(err);
+            return null; // Connection failed
+          }
+
+          return cacheConnection; // Return the new connection
+        }
+
+        const connection = await getSignalRConnection();
+        if (!connection) {
+          alert("Failed to connect to the server. Please try again.");
+          return;
+        }
+
+        async function displayOnlineUsers(users, message) {
+          const onlineUsersDiv = document.getElementById("online-users");
+          onlineUsersDiv.innerHTML = ""; // Clear the existing list
+
+          users.forEach((user) => {
+            const userDiv = document.createElement("div");
+            userDiv.style.display = "flex";
+            userDiv.style.alignItems = "center";
+            userDiv.textContent = user.name;
+            onlineUsersDiv.appendChild(userDiv);
+          });
+        }
+
+        async function SetName(name) {
+          try {
+            await connection.invoke("SetName", name); // Send login request to server
+          } catch (error) {
+            console.error("Error during SetName:", error);
+            alert("SetName failed. Please try again.");
+          }
+        }
+
+        async function ReceiveSetNameSuccess(id, name) {
+          currentUser = {
+            ...(currentUser ?? {}),
+            id: id,
+            name: name,
+          }; // Store the current user name
+          const welcomeMessage = document.getElementById("welcome-message");
+          welcomeMessage.textContent = `Welcome, ${currentUser.name}`;
+          updateAuthUI(); // Update the UI to show the logged-in state
+        }
+
+        async function GetMark() {
+          try {
+            const mark = await connection.invoke("GetMark", currentGameId); // Get your current mark from the server
+            return mark;
+          } catch (err) {
+            console.error(err.toString());
+            document.getElementById("status").textContent =
+              "Failed to retrieve your mark. Please try again.";
+            document.getElementById("btn-exit-game").style.display = "none"; // Hide the exit game button
+
+            return null; // Mark retrieval failed
+          }
+        }
+
+        async function sendMove(row, col, matchId) {
+          try {
+            await connection.invoke("SendMove", row, col, matchId);
+            return true; // Move sent successfully
+          } catch (err) {
+            console.error(err.toString());
+            return false; // Move failed
+          }
+        }
+
+        function ReceiveMove(row, col, player) {
+          if (!board[row][col] && !gameOver) {
+            if (!setBoardCell(row, col, player)) {
+              // Set the cell on the board
+              return; // Cell set failed, do not proceed
+            }
+            previousMark = { row: +row, col: +col }; // Store the last move for animation
+            animateMark(player, col, row);
+            const winner = checkWinnerFromLastMove(row, col);
+            if (winner) {
+              handleGameEnded(winner); // handle the end of the match
+            } else {
+              document.getElementById("status").textContent =
+                player === "X" ? "O's turn" : "X's turn";
+            }
+          }
+        }
+        function ReceiveExitMatch(opponentId, message) {
+          if (opponentId) {
+            alert(message); // Log the message from the server
+            currentGameId = null; // Reset the game ID
+            document.getElementById("status").textContent = "Exited game."; // Clear status message
+            document.getElementById("btn-start-game").style.display = "block"; // Show the start game button again
+            document.getElementById("btn-exit-game").style.display = "none"; // Hide the exit game button
+            document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button again
+            document.getElementById("user-sidebar").classList.add("open"); // Open the sidebar
+          }
+        }
+
+        // Listen to game start from server
+        async function ReceiveMatchFound(opponent, gameId, row, col) {
+          currentGameId = gameId; // Store the game ID
+          var result = await GetMark(); // Get your current mark from the server
+          if (result == null) return; // Mark retrieval failed
+          currentPlayer = result; // Set the current player based on the server response
+          document.getElementById("status").textContent =
+            currentPlayer === "X" ? "You are X" : "You are O";
+          document.getElementById("board-size").value = row; // Set the new board size from the server
+          await resetGame();
+          alert(
+            "Match found! You are playing against " +
+              opponent +
+              ". Your mark is " +
+              currentPlayer
+          );
+          document.getElementById("btn-start-game").style.display = "none"; // Hide the start game button
+          document.getElementById("btn-exit-game").style.display = "block"; // Show the exit game button
+          document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button
+          document.getElementById("user-sidebar").classList.remove("open"); // Hide the sidebar
+        }
+
+        async function ReceiveUserAlreadyInAMatch(gameId, opponent) {
+          currentGameId = gameId; // Store the game ID
+          document.getElementById("btn-start-game").style.display = "none"; // Hide the start game button
+          document.getElementById("btn-exit-game").style.display = "block"; // Show the exit game button
+          document.getElementById("btn-reset-game").style.display = "none"; // Hide the reset game button
+          const statusDiv = document.getElementById("status");
+          const previousContent = statusDiv.textContent;
+          statusDiv.textContent =
+            "You are already in a match with " +
+            opponent +
+            ". Please exit the current match before starting a new one.";
+          setTimeout(() => {
+            statusDiv.textContent = previousContent; // Reset the status message after 5 seconds
+          }, 2000); // 2000 milliseconds = 2 seconds
+        }
+
+        async function ReceiveMatchRestart(newGameId, message, row, column) {
+          alert(message); // Log the message from the server
+          currentGameId = newGameId; // Store the game ID
+          const sizeSelect = document.getElementById("board-size");
+          sizeSelect.value = row; // Set the new board size from the server
+          await resetGame(); // Reset the game state
+          document.getElementById("status").textContent =
+            "Match restarted. You are " + currentPlayer;
+          document.getElementById("btn-start-game").style.display = "none"; // Hide the start game button
+          document.getElementById("btn-exit-game").style.display = "block"; // Show the exit game button
+          document.getElementById("btn-reset-game").style.display = "block"; // Show the reset game button
+          document.getElementById("user-sidebar").classList.remove("open"); // Hide the sidebar
+        }
+
+        async function handleClick(event) {
+          if (!currentPlayer || gameOver) return;
+
+          const rect = canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+
+          const col = Math.floor(x / CELL_SIZE);
+          const row = Math.floor(y / CELL_SIZE);
+
+          if (!board[row][col]) {
+            // send move to server!
+            if (!(await sendMove(row + "", col + "", currentGameId))) {
+              return; // Move failed, do not proceed
+            }
+
+            const isSetSuccess = setBoardCell(row, col, currentPlayer);
+            animateMark(board[row][col], col, row); // animate the growing mark
+            previousMark = { row, col }; // Store the last move for animation
+
+            const winner = checkWinnerFromLastMove(row, col); // check for winner (draw or win)
+            if (winner) {
+              isSetSuccess && (await handleGameEnded(winner)); // handle the end of the match
+              connection.invoke(
+                "EndMatch",
+                String(currentGameId ?? ""),
+                String(winner ?? ""),
+                board
+              ); // Send end match request to server
+            }
+          }
+        }
+
+        function handleGameEnded(winner) {
+          gameOver = true; // stop the game
+          const result = winner === "draw" ? "It's a draw!" : `${winner} wins!`;
+          document.getElementById("status").textContent = result; // show the result
+          alert(result); // show the result in an alert
+          document.getElementById("btn-reset-game").style.display = "block"; // Show the start game button again
+          document.getElementById("btn-exit-game").style.display = "none"; // Hide the exit game button
+          document.getElementById("btn-start-game").style.display = "block"; // Hide the start game button
+          document.getElementById("user-sidebar").classList.add("open"); // Hide the sidebar
+        }
+
+        function setBoardCell(row, col, mark) {
+          if (lock || board[row][col]) return false; // Prevent setting the cell if the game is locked
+          lock = true; // Lock the game to prevent multiple clicks)
+          board[row][col] = mark;
+          lock = false; // Unlock the game after setting the cell
+          return true; // Cell set successfully
+        }
+
+        document.addEventListener("unload", async () => {
+          if (connection) {
+            await connection.invoke("Logout", currentUser.name); // Send logout request to server
+            await connection.stop(); // Stop the connection when the page is unloaded
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -4,11 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Caro (10x10)</title>
-    <!-- CSS for Toast -->
-    <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
-      rel="stylesheet"
-    />
     <style>
       /* CSS remains the same as original */
       body {
@@ -17,22 +12,12 @@
         background-color: #f0f0f0;
       }
 
-      #canvas-container {
-        width: 100vw;
-        height: 80vh;
-        position: relative;
-        margin: 20px auto 0 auto;
-      }
-
       canvas {
         border: 2px solid #333;
         display: block;
+        margin: 20px auto;
         background: #fafafa;
         cursor: pointer;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
       }
 
       #auth-container {
@@ -227,127 +212,6 @@
         flex-shrink: 0;
       }
 
-      #status-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-around;
-        gap: 20px;
-        align-items: center;
-      }
-
-      #status-container p {
-        font-size: 18px;
-        margin: 0;
-      }
-
-      #status-container p#your-name {
-        font-weight: bold;
-        color: #3b82f6;
-      }
-
-      #status-container p#opponent-name {
-        font-weight: bold;
-        color: #ef4444;
-      }
-
-      #status-container p#status {
-        font-weight: bold;
-        color: #333;
-      }
-
-      #playing-match-list {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90vw;
-        max-width: 400px;
-        height: 60vh;
-        overflow-y: auto;
-        background-color: #ffffff;
-        padding: 20px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        border-radius: 12px;
-        z-index: 1000;
-        display: none;
-      }
-
-      #playing-match-list h3 {
-        margin-top: 0;
-        color: #1f2937;
-        font-size: 1.5rem;
-        text-align: center;
-        font-weight: bold;
-      }
-
-      #playing-match-list .online-users-list {
-        margin-top: 20px;
-        text-align: left;
-      }
-
-      #playing-match-list .online-users-list > div {
-        display: flex;
-        align-items: center;
-        padding: 10px 15px;
-        font-size: 16px;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        background-color: #f9fafb;
-        transition: background-color 0.3s, transform 0.2s;
-      }
-
-      #playing-match-list .online-users-list > div:last-child {
-        margin-bottom: 0;
-      }
-
-      #playing-match-list .online-users-list > div::before {
-        content: "";
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        background-color: #10b981;
-        border-radius: 50%;
-        margin-right: 12px;
-        flex-shrink: 0;
-      }
-
-      #playing-match-list .online-users-list > div::after {
-        content: "Playing";
-        margin-left: auto;
-        color: #2563eb;
-        font-weight: bold;
-        font-size: 14px;
-      }
-
-      #playing-match-list .online-users-list > div:hover {
-        background-color: #e0f2fe;
-        transform: translateY(-2px);
-        cursor: pointer;
-      }
-
-      #playing-match-list .online-users-list > div:hover::before {
-        background-color: #2563eb;
-      }
-
-      #playing-match-list .online-users-list > div:hover::after {
-        color: #1d4ed8;
-      }
-
-      #btn-close-matches-list {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background-color: transparent;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: #333;
-        padding: 10px;
-        border-radius: 50%;
-        transition: background-color 0.3s;
-      }
-
       @media (max-width: 600px) {
         #online-users-toggle,
         #sidebar-toggle {
@@ -397,20 +261,9 @@
           <option value="25">25x25</option>
         </select>
       </div>
-      <div id="Rule-checkbox-control">
-        <input
-          type="checkbox"
-          id="block-two-sides-checkbox"
-          style="margin-left: 10px"
-        />
-        <label for="block-two-sides-checkbox">Block Two Sides Rule:</label>
-      </div>
       <button id="btn-start-game" style="display: block">Find Game</button>
       <button id="btn-exit-game" style="display: none">Exit Game</button>
       <button id="btn-reset-game" style="display: none">Reset Game</button>
-      <button id="btn-match-list" style="display: block">
-        Playing Matches
-      </button>
       <button id="btn-logout">Logout</button>
     </div>
 
@@ -421,48 +274,12 @@
       <div id="online-users" class="online-users-list"></div>
     </div>
 
-    <div id="playing-match-list">
-      <h3>Playing Matches</h3>
-      <button id="btn-close-matches-list">✖️</button>
-      <div id="playing-matches" class="online-users-list"></div>
-    </div>
-
     <h1 id="app-header">Caro (10x10)</h1>
     <div id="canvas-container">
       <canvas id="gameCanvas"></canvas>
     </div>
-    <div id="status-container">
-      <p id="your-name"></p>
-      <p id="status"></p>
-      <p id="opponent-name"></p>
-    </div>
+    <p id="status"></p>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
-      integrity="sha512-VEd+nq25CkR676O+pLBnDW09R7VQX9Mdiij052gVCp5yVH3jGtH70Ho/UUv4mJDsEdTvqRCFZg0NKGiojGnUCw=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script>
-      toastr.options = {
-        closeButton: true,
-        debug: false,
-        newestOnTop: false,
-        progressBar: true,
-        positionClass: "toast-top-center",
-        preventDuplicates: false,
-        onclick: null,
-        showDuration: "300",
-        hideDuration: "1000",
-        timeOut: "5000",
-        extendedTimeOut: "1000",
-        showEasing: "swing",
-        hideEasing: "linear",
-        showMethod: "fadeIn",
-        hideMethod: "fadeOut",
-      };
-    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script>
       (async () => {
@@ -494,14 +311,6 @@
           hoverCell: { row: -1, col: -1 },
           lock: false,
           connection: null,
-          onlineUsers: [],
-          playingMatches: [],
-          currentViewMatch: null,
-          score: {
-            you: 0,
-            opponent: 0,
-          },
-          isBlockTwoSides: false,
         };
 
         // DOM Elements
@@ -517,69 +326,14 @@
           btnStartGame: document.getElementById("btn-start-game"),
           btnExitGame: document.getElementById("btn-exit-game"),
           btnResetGame: document.getElementById("btn-reset-game"),
-          btnCloseMatchesList: document.getElementById(
-            "btn-close-matches-list"
-          ),
           btnLogout: document.getElementById("btn-logout"),
-          blockTwoSidesCheckbox: document.getElementById(
-            "block-two-sides-checkbox"
-          ),
           onlineUsersToggle: document.getElementById("online-users-toggle"),
           onlineUsersSidebar: document.getElementById("online-users-sidebar"),
           onlineUsersList: document.getElementById("online-users"),
           appHeader: document.getElementById("app-header"),
           canvas: document.getElementById("gameCanvas"),
           status: document.getElementById("status"),
-          yourName: document.getElementById("your-name"),
-          opponentName: document.getElementById("opponent-name"),
-          playingMatchList: document.getElementById("playing-match-list"),
-          playingMatches: document.getElementById("playing-matches"),
-          btnMatchList: document.getElementById("btn-match-list"),
         };
-
-        // Zoom State
-        let panTouchMouseInitialState = {
-          scale: 1,
-          lastScale: 1,
-          originX: 0,
-          originY: 0,
-          lastTouchDistance: 0,
-          isPanning: false,
-          lastTouchX: 0,
-          lastTouchY: 0,
-          isDragging: false,
-          lastMouseX: 0,
-          lastMouseY: 0,
-        };
-
-        let scale = panTouchMouseInitialState.scale; // Default zoom level
-        let lastScale = panTouchMouseInitialState.lastScale;
-        let originX = panTouchMouseInitialState.originX;
-        let originY = panTouchMouseInitialState.originY;
-
-        let lastTouchDistance = panTouchMouseInitialState.lastTouchDistance;
-        let isPanning = panTouchMouseInitialState.isPanning;
-        let lastTouchX = panTouchMouseInitialState.lastTouchX;
-        let lastTouchY = panTouchMouseInitialState.lastTouchY;
-
-        // Add mouse event listeners for panning
-        let isDragging = panTouchMouseInitialState.isDragging;
-        let lastMouseX = panTouchMouseInitialState.lastMouseX;
-        let lastMouseY = panTouchMouseInitialState.lastMouseY;
-
-        function resetPanTouchMouseState() {
-          scale = panTouchMouseInitialState.scale; // Default zoom level
-          lastScale = panTouchMouseInitialState.lastScale;
-          originX = panTouchMouseInitialState.originX;
-          originY = panTouchMouseInitialState.originY;
-          lastTouchDistance = panTouchMouseInitialState.lastTouchDistance;
-          isPanning = panTouchMouseInitialState.isPanning;
-          lastTouchX = panTouchMouseInitialState.lastTouchX;
-          lastTouchY = panTouchMouseInitialState.lastTouchY;
-          isDragging = panTouchMouseInitialState.isDragging;
-          lastMouseX = panTouchMouseInitialState.lastMouseX;
-          lastMouseY = panTouchMouseInitialState.lastMouseY;
-        }
 
         // Canvas Setup
         const ctx = elements.canvas.getContext("2d");
@@ -605,249 +359,16 @@
           elements.btnStartGame.addEventListener("click", findGame);
           elements.btnExitGame.addEventListener("click", exitGame);
           elements.btnResetGame.addEventListener("click", handleResetGame);
-          elements.btnMatchList.addEventListener("click", handleClickMatchList);
-          elements.btnCloseMatchesList.addEventListener(
-            "click",
-            handleBtnCloseMatchesListClick
-          );
 
           // Board size change
           elements.boardSizeSelect.addEventListener("change", changeBoardSize);
 
-          elements.blockTwoSidesCheckbox.addEventListener(
-            "change",
-            handleBlockTwoSidesChange
-          );
-
           // Canvas events
           elements.canvas.addEventListener("click", handleCanvasClick);
           elements.canvas.addEventListener("mousemove", handleCanvasMouseMove);
-          // Add touch event listeners for pinch-to-zoom
-          elements.canvas.addEventListener("touchstart", handleTouchStart, {
-            passive: false,
-          });
-          elements.canvas.addEventListener("touchmove", handleTouchMove, {
-            passive: false,
-          });
-          elements.canvas.addEventListener("touchend", handleTouchEnd, {
-            passive: false,
-          });
-          elements.canvas.addEventListener("mousedown", handleMouseDown);
-          elements.canvas.addEventListener("mousemove", handleMouseMove);
-          elements.canvas.addEventListener("mouseup", handleMouseUp);
-          elements.canvas.addEventListener("mouseleave", handleMouseLeave);
-          elements.canvas.addEventListener("wheel", handleWheelZoom, {
-            passive: false,
-          });
 
           // Window events
           window.addEventListener("unload", cleanup);
-          document.addEventListener("click", handleDocumentClick);
-        }
-
-        function handleBlockTwoSidesChange() {
-          gameState.isBlockTwoSides = elements.blockTwoSidesCheckbox.checked;
-        }
-
-        function handleDocumentClick(event) {
-          if (
-            !elements.playingMatchList.contains(event.target) &&
-            !elements.btnMatchList.contains(event.target)
-          ) {
-            elements.playingMatchList.style.display = "none";
-            return; // Prevent closing the sidebar if clicking inside the match list
-          }
-          if (
-            !elements.userSidebar.contains(event.target) &&
-            !elements.sidebarToggle.contains(event.target)
-          ) {
-            elements.userSidebar.classList.remove("open");
-          }
-          if (
-            !elements.onlineUsersSidebar.contains(event.target) &&
-            !elements.onlineUsersToggle.contains(event.target)
-          ) {
-            elements.onlineUsersSidebar.classList.remove("open");
-          }
-        }
-
-        function handleBtnCloseMatchesListClick() {
-          elements.playingMatchList.style.display = "none";
-        }
-
-        function handleClickMatchList() {
-          elements.playingMatchList.style.display = "block";
-          displayPlayingMatches();
-        }
-
-        async function displayPlayingMatches() {
-          elements.playingMatches.innerHTML = ""; // Clear previous matches
-
-          const connection = await getSignalRConnection();
-          if (!connection) {
-            toastr.error(
-              "Failed to connect to the server. Please try again.",
-              "Server Error"
-            );
-            return;
-          }
-
-          try {
-            const matches = await connection.invoke("GetPlayingMatches");
-            gameState.playingMatches = matches;
-            renderPlayingMatches();
-          } catch (err) {
-            console.error(err.toString());
-            toastr.error("Failed to fetch playing matches.", "Error");
-            gameState.playingMatches = [];
-          }
-        }
-
-        function renderPlayingMatches() {
-          gameState.playingMatches.forEach((match) => {
-            const matchDiv = document.createElement("div");
-            matchDiv.dataset.matchId = match.id;
-            matchDiv.textContent = `${match.player1.name} vs ${match.player2.name}`;
-            matchDiv.addEventListener("click", handleMatchClick);
-            elements.playingMatches.appendChild(matchDiv);
-          });
-        }
-
-        async function handleMatchClick(event) {
-          const matchId = event.currentTarget.dataset.matchId;
-          if (!matchId) {
-            toastr.error("Invalid match ", "Error");
-            return;
-          }
-          const connection = await getSignalRConnection();
-          if (!connection) {
-            toastr.error(
-              "Failed to connect to the server. Please try again.",
-              "Server Error"
-            );
-            return;
-          }
-
-          try {
-            const match = await connection.invoke("JoinMatch", matchId + "");
-            if (match) {
-              gameState.currentViewMatch = match;
-              gameState.currentGameId = match.id;
-              gameState.currentPlayer = null; // Example: Set current player to X
-              gameState.boardSize = match.row;
-              elements.boardSizeSelect.value = match.row;
-              gameState.board = Array.from(
-                { length: gameState.boardSize },
-                () => Array(gameState.boardSize).fill("")
-              );
-              gameState.gameOver = false;
-              gameState.previousMark = {
-                row: match?.previousMove?.row || -1,
-                col: match?.previousMove?.col || -1,
-                isPlayer1Turn: match.isPlayer1Turn,
-              };
-              gameState.isBlockTwoSides = match.isBlockTwoSides;
-              elements.blockTwoSidesCheckbox.checked = match.isBlockTwoSides;
-              match.board.forEach((row, rowIndex) => {
-                row.forEach((cell, colIndex) => {
-                  gameState.board[rowIndex][colIndex] =
-                    cell === true ? "X" : cell === false ? "O" : "";
-                });
-              });
-              console.log(gameState.board, match);
-
-              updateTitle();
-              resizeCanvas();
-              drawBoard();
-              elements.status.textContent = `You are viewing the match between ${match.player1.name} and ${match.player2.name}`;
-              elements.btnStartGame.style.display = "none";
-              elements.btnResetGame.style.display = "none";
-              elements.btnExitGame.style.display = "block";
-              elements.playingMatchList.style.display = "none";
-              elements.boardSizeSelect.style.d;
-              elements.yourName.textContent = `Player 1: ${match.player1.name}`;
-              elements.opponentName.textContent = `Player 2: ${match.player2.name}`;
-              elements.boardSizeSelect.disabled = true;
-              elements.userSidebar.classList.remove("open");
-              elements.onlineUsersSidebar.classList.remove("open");
-            }
-          } catch (err) {
-            console.error(err.toString());
-            toastr.error("Failed to join the match.", "Error");
-            toastr.error(err.toString(), "Error");
-          }
-        }
-
-        // Wheel event for zooming
-        function handleWheelZoom(event) {
-          if (!elements.canvas.contains(event.target)) return;
-          event.preventDefault(); // Prevent default scrolling behavior
-
-          const zoomIntensity = 0.1; // Adjust zoom intensity
-          const mouseX =
-            (event.clientX -
-              elements.canvas.getBoundingClientRect().left -
-              originX) /
-            scale;
-          const mouseY =
-            (event.clientY -
-              elements.canvas.getBoundingClientRect().top -
-              originY) /
-            scale;
-
-          if (event.deltaY < 0) {
-            // Zoom in
-            scale *= 1 + zoomIntensity;
-          } else {
-            // Zoom out
-            scale *= 1 - zoomIntensity;
-          }
-
-          // Limit zoom level (e.g., 0.5x to 3x)
-          scale = Math.max(0.5, Math.min(scale, 3));
-
-          // Adjust origin to keep the zoom centered on the mouse position
-          originX -= mouseX * (scale - lastScale);
-          originY -= mouseY * (scale - lastScale);
-
-          lastScale = scale;
-
-          drawBoard(); // Redraw the canvas with the updated scale and origin
-        }
-
-        // Mouse event handlers
-        function handleMouseUp() {
-          isDragging = false;
-        }
-
-        function handleMouseLeave() {
-          isDragging = false;
-        }
-
-        function handleMouseDown(event) {
-          isDragging = true;
-          const rect = elements.canvas.getBoundingClientRect();
-          lastMouseX = event.clientX - rect.left;
-          lastMouseY = event.clientY - rect.top;
-        }
-
-        function handleMouseMove(event) {
-          if (isDragging) {
-            const rect = elements.canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-
-            const deltaX = x - lastMouseX;
-            const deltaY = y - lastMouseY;
-
-            originX += deltaX / scale;
-            originY += deltaY / scale;
-
-            lastMouseX = x;
-            lastMouseY = y;
-
-            drawBoard(); // Redraw the canvas with the updated pan offsets
-          }
         }
 
         // UI Functions
@@ -867,7 +388,6 @@
             elements.sidebarToggle.style.display = "block";
             elements.userSidebar.style.display = "flex";
             elements.onlineUsersToggle.style.display = "block";
-            elements.userSidebar.classList.add("open");
           } else {
             elements.authContainer.style.display = "block";
             elements.loginForm.style.display = "block";
@@ -895,17 +415,11 @@
           CELL_SIZE = 50;
           if (CELL_SIZE * gameState.boardSize > window.innerWidth) {
             CELL_SIZE = window.innerWidth / gameState.boardSize; // Responsive size for smaller screens
-          } else if (CELL_SIZE * gameState.boardSize > window.innerHeight) {
-            CELL_SIZE = window.innerHeight / gameState.boardSize; // Responsive size for smaller screens
+          } else {
+            CELL_SIZE = 50;
           }
-          elements.canvas.width = Math.min(
-            elements.canvas.parentElement.clientWidth,
-            CELL_SIZE * gameState.boardSize + 20 // Responsive size for smaller screens
-          );
-          elements.canvas.height = Math.min(
-            elements.canvas.parentElement.clientHeight,
-            CELL_SIZE * gameState.boardSize + 20 // Responsive size for smaller screens
-          );
+          elements.canvas.width = CELL_SIZE * gameState.boardSize;
+          elements.canvas.height = CELL_SIZE * gameState.boardSize;
         }
 
         function updateTitle() {
@@ -1002,22 +516,19 @@
         }
 
         function animateMark(mark, col, row) {
-          let currentScale = 0;
+          let scale = 0;
           const targetScale = 1;
-          const centerX = (col * CELL_SIZE + CELL_SIZE / 2) * scale + originX;
-          const centerY = (row * CELL_SIZE + CELL_SIZE / 2) * scale + originY;
-          const maxFontSize = CELL_SIZE * 0.6 * scale;
+          const centerX = col * CELL_SIZE + CELL_SIZE / 2;
+          const centerY = row * CELL_SIZE + CELL_SIZE / 2;
+          const maxFontSize = CELL_SIZE * 0.6;
           const glowColor =
             mark === "X" ? "rgba(255, 51, 51, 0.5)" : "rgba(51, 51, 255, 0.5)";
 
           function animate() {
             ctx.save();
-
             drawBoard();
-
             ctx.translate(centerX, centerY);
-            ctx.scale(currentScale, currentScale);
-
+            ctx.scale(scale, scale);
             ctx.shadowColor = glowColor;
             ctx.shadowBlur = 20;
             ctx.font = `${maxFontSize}px Arial`;
@@ -1025,11 +536,10 @@
             ctx.textBaseline = "middle";
             ctx.fillStyle = mark === "X" ? "#ff3333" : "#3333ff";
             ctx.fillText(mark, 0, 0);
-
             ctx.restore();
 
-            currentScale += 0.1;
-            if (currentScale <= targetScale) {
+            scale += 0.1;
+            if (scale <= targetScale) {
               requestAnimationFrame(animate);
             }
           }
@@ -1054,8 +564,7 @@
           return true;
         }
 
-        function checkWinnerFromLastMove(row, col, blockTwoSides = false) {
-          if (gameState.gameOver) return null;
+        function checkWinnerFromLastMove(row, col) {
           const needed = gameState.boardSize >= 10 ? 5 : 3;
           const player = gameState.board[row][col];
 
@@ -1070,18 +579,12 @@
 
           function countInDirection(deltaRow, deltaColumn) {
             let count = 1;
-            let countBlockSides = 0;
 
             // Check forward
             let r = +row + deltaRow;
             let c = +col + deltaColumn;
             while (isValidCell(r, c)) {
-              if (gameState.board[r][c] !== player) {
-                if (blockTwoSides && gameState.board[r][c] !== "") {
-                  countBlockSides++;
-                }
-                break;
-              }
+              if (gameState.board[r][c] !== player) break;
               count++;
               r += deltaRow;
               c += deltaColumn;
@@ -1091,19 +594,10 @@
             r = row - deltaRow;
             c = col - deltaColumn;
             while (isValidCell(r, c)) {
-              if (gameState.board[r][c] !== player) {
-                if (blockTwoSides && gameState.board[r][c] !== "") {
-                  countBlockSides++;
-                }
-                break;
-              }
+              if (gameState.board[r][c] !== player) break;
               count++;
               r -= deltaRow;
               c -= deltaColumn;
-            }
-
-            if (blockTwoSides && countBlockSides > 1) {
-              return 0; // Block both sides
             }
 
             return count;
@@ -1140,11 +634,45 @@
           );
         }
 
+        // async function handleCanvasClick(event) {
+        //   if (!gameState.currentPlayer || gameState.gameOver) return;
+
+        //   const rect = elements.canvas.getBoundingClientRect();
+        //   const x = event.clientX - rect.left;
+        //   const y = event.clientY - rect.top;
+
+        //   const col = Math.floor(x / CELL_SIZE);
+        //   const row = Math.floor(y / CELL_SIZE);
+
+        //   if (!gameState.board[row][col]) {
+        //     if (!(await sendMove(row, col, gameState.currentGameId))) return;
+
+        //     const isSetSuccess = setBoardCell(
+        //       row,
+        //       col,
+        //       gameState.currentPlayer
+        //     );
+        //     animateMark(gameState.board[row][col], col, row);
+        //     gameState.previousMark = { row, col };
+
+        //     const winner = checkWinnerFromLastMove(row, col);
+        //     if (winner) {
+        //       isSetSuccess && (await handleGameEnded(winner));
+        //       gameState.connection.invoke(
+        //         "EndMatch",
+        //         String(gameState.currentGameId ?? ""),
+        //         String(winner ?? ""),
+        //         gameState.board
+        //       );
+        //     }
+        //   }
+        // }
+
         async function handleGameEnded(winner) {
           gameState.gameOver = true;
           const result = winner === "draw" ? "It's a draw!" : `${winner} wins!`;
           elements.status.textContent = result;
-          toastr.success(result, "Game Set");
+          alert(result);
           elements.btnResetGame.style.display = "block";
           elements.btnExitGame.style.display = "none";
           elements.btnStartGame.style.display = "block";
@@ -1156,19 +684,13 @@
           sizeSelect.value = gameState.boardSize;
           const row = parseInt(sizeSelect.value);
           const column = parseInt(sizeSelect.value);
-          try {
-            await gameState.connection.invoke(
-              "Restart",
-              gameState.currentGameId,
-              row,
-              column,
-              gameState.isBlockTwoSides
-            );
-            elements.status.textContent = "";
-          } catch (err) {
-            console.error(err.toString());
-            // elements.btnResetGame.style.display = "none";
-          }
+          await gameState.connection.invoke(
+            "Restart",
+            gameState.currentGameId,
+            row,
+            column
+          );
+          elements.status.textContent = "";
         }
 
         // Connection and Server Communication
@@ -1212,52 +734,34 @@
             receiveSetNameSuccess
           );
           gameState.connection.on("DisplayOnlineUsers", displayOnlineUsers);
-          gameState.connection.on("ReceiveMatchEnd", receiveMatchEnd);
-        }
-
-        async function receiveMatchEnd(gameId, message, isViewer) {
-          gameState.gameOver = true;
-          gameState.currentGameId = null;
-          if (isViewer) {
-            gameState.currentViewMatch = null;
-            elements.boardSizeSelect.disabled = false;
-          }
-
-          elements.status.textContent = message;
-          elements.btnResetGame.style.display = "none";
-          elements.btnExitGame.style.display = "block";
-          elements.btnStartGame.style.display = "block";
-          elements.userSidebar.classList.add("open");
         }
 
         // Authentication Functions
         async function login() {
           const username = elements.loginUsername.value;
-          // Show a success toast
           if (!username) return;
 
           try {
             const connection = await getSignalRConnection();
             if (!connection) {
-              toastr.error(
-                "Failed to connect to the server. Please try again.",
-                "Server Error"
-              );
+              alert("Failed to connect to the server. Please try again.");
               return;
             }
             await connection.invoke("SetName", username);
-            gameState.token = true;
-            updateAuthUI();
           } catch (error) {
             console.error("Error during login:", error);
-            toastr.error(error.message, "Login Error");
+            alert("Login failed. Please try again.");
+            return;
           }
+
+          gameState.token = true;
+          updateAuthUI();
         }
 
         async function logout() {
           try {
             if (!gameState.currentUser?.name) {
-              toastr.error("You are not logged in.", "Logout Error");
+              alert("You are not logged in.");
               gameState.currentUser = null;
               gameState.token = null;
               updateAuthUI();
@@ -1266,21 +770,17 @@
 
             const connection = await getSignalRConnection();
             if (!connection) {
-              toastr.error(
-                "Failed to connect to the server. Please try again.",
-                "Server Error"
-              );
+              alert("Failed to connect to the server. Please try again.");
               return;
             }
 
             await connection.invoke("Logout", gameState.currentUser.name);
             gameState.currentUser = null;
             gameState.token = null;
-            toastr.success("Logged out successfully.", "Logout Success");
             updateAuthUI();
           } catch (error) {
             console.error("Error during logout:", error);
-            toastr.error("Logout failed. Please try again.", error.message);
+            alert("Logout failed. Please try again.");
           }
         }
 
@@ -1289,17 +789,13 @@
           try {
             const connection = await getSignalRConnection();
             if (!connection) {
-              toastr.error(
-                "Failed to connect to the server. Please try again.",
-                "Server Error"
-              );
+              alert("Failed to connect to the server. Please try again.");
               return;
             }
             await connection.invoke(
               "FindGame",
               gameState.boardSize,
-              gameState.boardSize,
-              gameState.isBlockTwoSides
+              gameState.boardSize
             );
           } catch (err) {
             console.error(err.toString());
@@ -1307,24 +803,6 @@
         }
 
         async function exitGame() {
-          if (gameState?.currentViewMatch?.id) {
-            try {
-              await gameState.connection.invoke(
-                "ExitCurrentViewingMatch",
-                gameState.currentViewMatch.id
-              );
-              gameState.currentGameId = null;
-              gameState.currentViewMatch = null;
-              elements.status.textContent = "Exited game.";
-              elements.btnStartGame.style.display = "block";
-              elements.btnExitGame.style.display = "none";
-              elements.btnResetGame.style.display = "none";
-            } catch (err) {
-              console.error(err.toString());
-            } finally {
-              return;
-            }
-          }
           try {
             await gameState.connection.invoke(
               "ExitMatch",
@@ -1334,7 +812,7 @@
             elements.status.textContent = "Exited game.";
             elements.btnStartGame.style.display = "block";
             elements.btnExitGame.style.display = "none";
-            elements.btnResetGame.style.display = "none";
+            elements.btnResetGame.style.display = "block";
           } catch (err) {
             console.error(err.toString());
           }
@@ -1343,34 +821,19 @@
         async function changeBoardSize() {
           gameState.boardSize = parseInt(elements.boardSizeSelect.value);
           await resetGame();
-
-          elements.status.textContent = `Board size changed to ${gameState.boardSize}x${gameState.boardSize}`;
-
           const size = parseInt(gameState.boardSize);
           await gameState.connection.invoke(
             "Restart",
             gameState.currentGameId,
             size,
-            size,
-            gameState.isBlockTwoSides
+            size
           );
         }
 
         async function resetGame() {
           resetBoard();
-          resetPanTouchMouseState();
           gameState.currentPlayer = await getMark();
-
-          const previousBtnState = {
-            resetBtn: elements.btnResetGame.style.display,
-            exitBtn: elements.btnExitGame.style.display,
-            startBtn: elements.btnStartGame.style.display,
-          };
           updateButtonVisibility();
-
-          elements.btnResetGame.style.display = previousBtnState.resetBtn;
-          elements.btnExitGame.style.display = previousBtnState.exitBtn;
-          elements.btnStartGame.style.display = previousBtnState.startBtn;
         }
 
         function updateButtonVisibility() {
@@ -1380,26 +843,16 @@
         }
 
         // Server Event Handlers
-        async function receiveMove(row, col, player, isViewer) {
+        async function receiveMove(row, col, player) {
           if (!gameState.board[row][col] && !gameState.gameOver) {
             if (!setBoardCell(row, col, player)) return;
 
             gameState.previousMark = { row: +row, col: +col };
             animateMark(player, col, row);
 
-            const winner = checkWinnerFromLastMove(
-              row,
-              col,
-              gameState.isBlockTwoSides
-            );
+            const winner = checkWinnerFromLastMove(row, col);
             if (winner) {
               handleGameEnded(winner);
-              if (!isViewer) return;
-
-              elements.btnExitGame.style.display = "block";
-              elements.btnResetGame.style.display = "none";
-              elements.btnStartGame.style.display = "none";
-              elements.btnLogout.style.display = "block";
             } else {
               elements.status.textContent =
                 player === "X" ? "O's turn" : "X's turn";
@@ -1407,60 +860,30 @@
           }
         }
 
-        function receiveExitMatch(opponentId, message, isViewer) {
+        function receiveExitMatch(opponentId, message) {
           if (opponentId) {
+            alert(message);
             gameState.currentGameId = null;
             elements.status.textContent = "Exited game.";
-            if (isViewer) {
-              toastr.info(message, "Opponent Left");
-              elements.boardSizeSelect.disabled = false;
-            }
-
             elements.btnStartGame.style.display = "block";
             elements.btnExitGame.style.display = "none";
-            elements.btnResetGame.style.display = "none";
+            elements.btnResetGame.style.display = "block";
             elements.userSidebar.classList.add("open");
-
-            toastr.info(
-              `The match has ended. ${message}. Please Exit the match`,
-              "Match Ended"
-            );
           }
         }
 
-        async function receiveMatchFound(
-          opponent,
-          gameId,
-          row,
-          col,
-          isBlockTwoSides
-        ) {
+        async function receiveMatchFound(opponent, gameId, row, col) {
           gameState.currentGameId = gameId;
           const result = await getMark();
-          if (result === null) return;
+          if (result == null) return;
 
           gameState.currentPlayer = result;
-          elements.status.textContent = `You play as ${result}`;
+          elements.status.textContent = `You are ${gameState.currentPlayer}`;
           elements.boardSizeSelect.value = row;
-          gameState.boardSize = row;
-          gameState.board = Array.from({ length: gameState.boardSize }, () =>
-            Array(gameState.boardSize).fill("")
-          );
-          gameState.gameOver = false;
-          gameState.previousMark = { row: -1, col: -1 };
-          gameState.isBlockTwoSides = isBlockTwoSides;
-          elements.blockTwoSidesCheckbox.checked = isBlockTwoSides;
           await resetGame();
-          gameState.opponent = gameState.onlineUsers.find(
-            ({ name }) => name === opponent
-          );
 
-          elements.yourName.textContent = `${gameState.currentUser?.name}`;
-          elements.opponentName.textContent = `${gameState.opponent.name}`;
-
-          toastr.info(
-            `You are playing against ${opponent}. Your mark is ${gameState.currentPlayer}`,
-            "Match Found"
+          alert(
+            `Match found! You are playing against ${opponent}. Your mark is ${gameState.currentPlayer}`
           );
           updateButtonVisibility();
           elements.userSidebar.classList.remove("open");
@@ -1481,23 +904,13 @@
           }, 2000);
         }
 
-        async function receiveMatchRestart(
-          newGameId,
-          message,
-          row,
-          column,
-          isViewer
-        ) {
-          toastr.info(message, "Match Restarted");
-
+        async function receiveMatchRestart(newGameId, message, row, column) {
+          alert(message);
           gameState.currentGameId = newGameId;
           elements.boardSizeSelect.value = row;
           await resetGame();
-          if (isViewer) {
-            elements.status.textContent = `You are viewing the match between ${gameState.opponent.name} and ${gameState.currentUser.name}`;
-          } else {
-            elements.status.textContent = `Match restarted. You are ${gameState.currentPlayer}`;
-          }
+          elements.status.textContent = `Match restarted. You are ${gameState.currentPlayer}`;
+          updateButtonVisibility();
           elements.userSidebar.classList.remove("open");
         }
 
@@ -1508,7 +921,6 @@
             name,
           };
           elements.welcomeMessage.textContent = `Welcome, ${gameState.currentUser.name}`;
-          toastr.success(`Logged in as ${name}`, "Login Success");
           updateAuthUI();
         }
 
@@ -1521,7 +933,6 @@
             userDiv.textContent = user.name;
             elements.onlineUsersList.appendChild(userDiv);
           });
-          gameState.onlineUsers = users;
         }
 
         // Utility Functions
@@ -1556,34 +967,33 @@
           }
         }
 
+        // Zoom State
+        let scale = 1; // Default zoom level
+        let lastScale = 1;
+        let originX = 0; // Pan offset X
+        let originY = 0; // Pan offset Y
+
+        // Add touch event listeners for pinch-to-zoom
+        elements.canvas.addEventListener("touchstart", handleTouchStart, {
+          passive: false,
+        });
+        elements.canvas.addEventListener("touchmove", handleTouchMove, {
+          passive: false,
+        });
+        elements.canvas.addEventListener("touchend", handleTouchEnd, {
+          passive: false,
+        });
+
+        let lastTouchDistance = 0;
+
         function handleTouchStart(event) {
-          if (event.touches.length === 1) {
-            isPanning = true;
-            lastTouchX = event.touches[0].clientX;
-            lastTouchY = event.touches[0].clientY;
-          } else if (event.touches.length === 2) {
+          if (event.touches.length === 2) {
             // Calculate initial distance between two fingers
             lastTouchDistance = getTouchDistance(event.touches);
           }
         }
 
         function handleTouchMove(event) {
-          if (isPanning && event.touches.length === 1) {
-            event.preventDefault(); // Prevent scrolling
-            const currentTouchX = event.touches[0].clientX;
-            const currentTouchY = event.touches[0].clientY;
-
-            const deltaX = currentTouchX - lastTouchX;
-            const deltaY = currentTouchY - lastTouchY;
-
-            originX += deltaX;
-            originY += deltaY;
-
-            lastTouchX = currentTouchX;
-            lastTouchY = currentTouchY;
-
-            drawBoard(); // Redraw the canvas with the updated pan offsets
-          }
           if (event.touches.length === 2) {
             event.preventDefault(); // Prevent scrolling
             const currentDistance = getTouchDistance(event.touches);
@@ -1601,7 +1011,6 @@
         }
 
         function handleTouchEnd(event) {
-          isPanning = false;
           if (event.touches.length < 2) {
             lastTouchDistance = 0;
           }
@@ -1635,11 +1044,7 @@
             animateMark(gameState.board[row][col], col, row);
             gameState.previousMark = { row, col };
 
-            const winner = checkWinnerFromLastMove(
-              row,
-              col,
-              gameState.isBlockTwoSides
-            );
+            const winner = checkWinnerFromLastMove(row, col);
             if (winner) {
               isSetSuccess && (await handleGameEnded(winner));
               gameState.connection.invoke(

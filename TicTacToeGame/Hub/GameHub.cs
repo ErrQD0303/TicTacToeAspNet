@@ -79,11 +79,12 @@ public class GameHub : Hub<IGameHubClient>
             match.Result = match.Player1Id == Context.ConnectionId ? MatchResult.Player2Win : MatchResult.Player1Win;
             Logger.LogInformation("User {0} and {1} exited match {MatchId}", match.Player1Id, match.Player2Id, match.Id);
             await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveExitMatch(match.Player1Id, $"Player {user.Name} exited the match");
+            await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveExitMatch(match.Player1Id, $"Player {user.Name} exited the match");
         }
         await Clients.All.DisplayOnlineUsers(await Users.GetAllValidUsers(), $"User {user.Name} disconnected");
     }
 
-    public async Task FindGame(int row, int column)
+    public async Task FindGame(int row, int column, bool isBlockTwoSides = false)
     {
         var currentUser = await Users.GetUserByIdAsync(Context.ConnectionId);
         if (currentUser == null)
@@ -133,10 +134,15 @@ public class GameHub : Hub<IGameHubClient>
             Row = row,
             Column = column,
             Player1Id = random ? player1.Id : player2.Id,
+            Player1Name = random ? player1.Name : player2.Name,
             Player2Id = random ? player2.Id : player1.Id,
+            Player2Name = random ? player2.Name : player1.Name,
+            Board = [.. Enumerable.Range(0, row).Select(_ => new bool?[column])],
+            Viewers = new List<SimpleUser>(),
             IsPlayer1Turn = true,
             Result = MatchResult.Ongoing,
-            Winner = string.Empty
+            IsBlockTwoSides = isBlockTwoSides,
+            WinnerId = string.Empty
         };
 
         var player1StillEligible = await IsUserStillAvailable(player1.Id);
@@ -144,7 +150,7 @@ public class GameHub : Hub<IGameHubClient>
 
         if (!player1StillEligible || !player2StillEligible)
         {
-            Logger.LogWarning("One of the players is no longer available: {Player1Id}, {Player2Id}", player1.Id, player2.Id);
+            Logger.LogWarning("One of the players is no longer available: {Player1Id}, {PRlayer2Id}", player1.Id, player2.Id);
             if (player1StillEligible) FindGameQueue.Enqueue(player1);
             if (player2StillEligible) FindGameQueue.Enqueue(player2);
             return;
@@ -153,8 +159,8 @@ public class GameHub : Hub<IGameHubClient>
         CurrentMatches.Add(match);
         Logger.LogInformation("Match created: {MatchId} between {Player1Id} and {Player2Id}", match.Id, match.Player1Id, match.Player2Id);
 
-        await Clients.Clients(match.Player1Id).ReceiveMatchFound(player1?.Name ?? "", match.Id.ToString(), match.Row, match.Column);
-        await Clients.Clients(match.Player2Id).ReceiveMatchFound(player2?.Name ?? "", match.Id.ToString(), match.Row, match.Column);
+        await Clients.Clients(match.Player1Id).ReceiveMatchFound(player1?.Name ?? "", match.Id.ToString(), match.Row, match.Column, isBlockTwoSides);
+        await Clients.Clients(match.Player2Id).ReceiveMatchFound(player2?.Name ?? "", match.Id.ToString(), match.Row, match.Column, isBlockTwoSides);
         return;
     }
 
@@ -165,7 +171,7 @@ public class GameHub : Hub<IGameHubClient>
         return IsUserStillAvaiable && !IsUserInMatch;
     }
 
-    public Task EndMatch(string matchId, string winner, string[][] board)
+    public async Task EndMatch(string matchId, string winner, string[][] board)
     {
         var userId = GetUserId();
         var match = CurrentMatches.FirstOrDefault(m => m.Id.ToString() == matchId);
@@ -184,11 +190,31 @@ public class GameHub : Hub<IGameHubClient>
         match.Result = winner switch
         {
             "X" => MatchResult.Player1Win,
-            "4" => MatchResult.Player2Win,
+            "O" => MatchResult.Player2Win,
             _ => MatchResult.Draw
         };
 
-        return Task.CompletedTask;
+        match.WinnerId = winner switch
+        {
+            "X" => match.Player1Id,
+            "O" => match.Player2Id,
+            _ => string.Empty
+        };
+
+        string message;
+
+        if (winner == "X" || winner == "O")
+        {
+            message = $"Match ended: {match.Player1Name} wins!";
+            Logger.LogInformation("Match ended: {MatchId} - {Winner}", match.Id, winner);
+        }
+        else
+        {
+            message = "Match ended in a draw";
+            Logger.LogInformation("Match ended in a draw: {MatchId}", match.Id);
+        }
+
+        await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMatchEnd(match.Id, message, true);
     }
 
     public async Task ExitMatch(string matchId)
@@ -212,10 +238,11 @@ public class GameHub : Hub<IGameHubClient>
         Logger.LogInformation("User {0} and {1} exited match {MatchId}", userId, match.Player2Id, matchId);
         var currentUser = await Users.GetUserByIdAsync(userId);
 
-        await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveExitMatch(match.Player1Id, $"Player {currentUser?.Name ?? ""} exited the match");
+        await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveExitMatch(match.Player1Id, $"Player {currentUser?.Name ?? ""} exited the match", false);
+        await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveExitMatch(match.Player1Id, $"Player {currentUser?.Name ?? ""} exited the match", true);
     }
 
-    public async Task Restart(string matchId, int row, int column)
+    public async Task Restart(string matchId, int row, int column, bool isBlockTwoSides = false)
     {
         var userId = GetUserId();
         var match = CurrentMatches.LastOrDefault(m => m.Id.ToString() == matchId);
@@ -236,16 +263,24 @@ public class GameHub : Hub<IGameHubClient>
             Row = row,
             Column = column,
             Player1Id = match.Player2Id,
+            Player1Name = match.Player2Name,
             Player2Id = match.Player1Id,
+            Player2Name = match.Player1Name,
+            Board = [.. Enumerable.Range(0, row).Select(_ => new bool?[column])],
+            Viewers = match.Viewers,
             IsPlayer1Turn = true,
             Result = MatchResult.Ongoing,
-            Winner = string.Empty,
+            IsBlockTwoSides = isBlockTwoSides,
+            WinnerId = string.Empty,
         };
 
         CurrentMatches.Add(newMatch);
 
         var currentUser = await Users.GetUserByIdAsync(userId);
         await Clients.Clients([newMatch.Player1Id, newMatch.Player2Id]).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch.Row, newMatch.Column);
+
+        await Clients.Clients(newMatch.Viewers.Select(v => v.Id)).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch.Row, newMatch.Column, true);
+        Logger.LogInformation("Match restarted: {MatchId} between {Player1Id} and {Player2Id}", newMatch.Id, newMatch.Player1Id, newMatch.Player2Id);
     }
 
     public async Task SendMove(string row, string column, string matchId)
@@ -261,7 +296,15 @@ public class GameHub : Hub<IGameHubClient>
         }
         match.IsPlayer1Turn = !match.IsPlayer1Turn;
 
-        await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(row, column, match.Player1Id == userId ? CellState.X.ToString() : CellState.O.ToString());
+        match.Board[int.Parse(row)][int.Parse(column)] = match.Player1Id == userId;
+        match.PreviousMove = new SimpleMove
+        {
+            Row = int.Parse(row),
+            Col = int.Parse(column),
+        };
+
+        await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(row, column, match.Player1Id == userId ? CellState.X.ToString() : CellState.O.ToString(), false);
+        await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(row, column, !match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
     }
 
     public string GetMark(string matchId)
@@ -317,5 +360,87 @@ public class GameHub : Hub<IGameHubClient>
             return string.Empty;
         }
         return match.Id.ToString();
+    }
+
+    public async Task<SimplePlayingMatch> JoinMatch(string matchId)
+    {
+        var match = CurrentMatches.FirstOrDefault(m => m.Id.ToString() == matchId);
+        if (match == null)
+        {
+            Logger.LogWarning("Match not found: {MatchId}", matchId);
+            throw new HubException("Match not found.");
+        }
+
+        var userId = GetUserId();
+        var currentUser = await Users.GetUserByIdAsync(userId);
+
+        if (currentUser == null)
+        {
+            Logger.LogWarning("User not found: {UserId}", userId);
+            throw new HubException("User not found.");
+        }
+
+        if (match.Result != MatchResult.Ongoing)
+        {
+            Logger.LogWarning("Match is not ongoing: {MatchId}", matchId);
+            throw new HubException("Match has ended..");
+        }
+
+        if (IsUserInMatch(userId, matchId))
+        {
+            Logger.LogWarning("User {UserId} is currently in the match: {MatchId}", userId, matchId);
+            throw new HubException("You are already in this match.");
+        }
+
+        match.Viewers.Add(currentUser);
+
+        return new SimplePlayingMatch
+        {
+            Id = match.Id.ToString(),
+            Player1 = new SimpleUser { Id = match.Player1Id, Name = match.Player1Name },
+            Player2 = new SimpleUser { Id = match.Player2Id, Name = match.Player2Name },
+            Board = match.Board,
+            Row = match.Row,
+            Column = match.Column,
+            IsPlayer1Turn = match.IsPlayer1Turn,
+            IsBlockTwoSides = match.IsBlockTwoSides,
+            PreviousMove = match.PreviousMove,
+        };
+    }
+
+    public Task<List<SimplePlayingMatch>> GetPlayingMatches()
+    {
+        return Task.FromResult(CurrentMatches.Where(m => m.Result == MatchResult.Ongoing).Select(m => new SimplePlayingMatch
+        {
+            Id = m.Id.ToString(),
+            Player1 = new SimpleUser { Id = m.Player1Id, Name = m.Player1Name },
+            Player2 = new SimpleUser { Id = m.Player2Id, Name = m.Player2Name },
+            Board = m.Board,
+            Row = m.Row,
+            Column = m.Column,
+            IsPlayer1Turn = m.IsPlayer1Turn,
+            IsBlockTwoSides = m.IsBlockTwoSides,
+            PreviousMove = m.PreviousMove,
+        }).ToList());
+    }
+
+    public async Task ExitCurrentViewingMatch(string matchId)
+    {
+        var userId = GetUserId();
+        var match = CurrentMatches.FirstOrDefault(m => m.Id.ToString() == matchId && m.Viewers.Any(v => v.Id == userId));
+        if (match == null)
+        {
+            Logger.LogWarning("Match not found: {MatchId}", matchId);
+            throw new HubException("Match not found.");
+        }
+
+        var currentUser = await Users.GetUserByIdAsync(userId);
+        if (currentUser == null)
+        {
+            Logger.LogWarning("User not found: {UserId}", userId);
+            throw new HubException("User not found.");
+        }
+
+        match.Viewers.Remove(currentUser);
     }
 }
