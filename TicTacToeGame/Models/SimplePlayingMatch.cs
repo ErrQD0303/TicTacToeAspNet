@@ -17,4 +17,5 @@ public class SimplePlayingMatch
         Row = -1,
         Col = -1
     };
+    public bool IsBotGame { get; set; } = false;
 }

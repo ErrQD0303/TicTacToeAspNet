@@ -17,6 +17,7 @@ public class ServiceHostingStartup : IHostingStartup
         {
             services.AddSingleton<ISimpleUserService, SimpleUserService>();
             services.AddSingleton<ITokenService<SimpleUser>, SimpleTokenService>();
+            services.AddTransient<IBotService, BotService>();
         });
     }
 }

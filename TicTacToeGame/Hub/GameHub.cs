@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
+using TicTacToeGame.Helpers;
 using TicTacToeGame.Helpers.Enum;
 using TicTacToeGame.Helpers.Mappers;
 using TicTacToeGame.Models;
+using TicTacToeGame.Services;
 using TicTacToeGame.Services.Interfaces;
 
 namespace TicTacToeGame.Hub;
@@ -14,12 +16,14 @@ public class GameHub : Hub<IGameHubClient>
     public static List<SimpleMatch> CurrentMatches { get; } = [];
     public static ConcurrentQueue<SimpleUser> FindGameQueue { get; } = new();
     public static ISimpleUserService Users { get; private set; } = default!;
+    public static IBotService BotService { get; private set; } = default!;
     private static readonly Random _random = new();
 
-    public GameHub(ILogger<GameHub> logger, ISimpleUserService userService)
+    public GameHub(ILogger<GameHub> logger, ISimpleUserService userService, IBotService botService)
     {
-        Users = userService;
         Logger = logger;
+        Users = userService;
+        BotService = botService;
     }
     public override async Task OnConnectedAsync()
     {
@@ -159,8 +163,8 @@ public class GameHub : Hub<IGameHubClient>
         CurrentMatches.Add(match);
         Logger.LogInformation("Match created: {MatchId} between {Player1Id} and {Player2Id}", match.Id, match.Player1Id, match.Player2Id);
 
-        await Clients.Clients(match.Player1Id).ReceiveMatchFound(player1?.Name ?? "", match.Id.ToString(), match.Row, match.Column, isBlockTwoSides);
-        await Clients.Clients(match.Player2Id).ReceiveMatchFound(player2?.Name ?? "", match.Id.ToString(), match.Row, match.Column, isBlockTwoSides);
+        await Clients.Clients(match.Player1Id).ReceiveMatchFound(player2?.Name ?? "", match.Id.ToString(), match.Row, match.Column, isBlockTwoSides);
+        await Clients.Clients(match.Player2Id).ReceiveMatchFound(player1?.Name ?? "", match.Id.ToString(), match.Row, match.Column, isBlockTwoSides);
         return;
     }
 
@@ -272,6 +276,7 @@ public class GameHub : Hub<IGameHubClient>
             Result = MatchResult.Ongoing,
             IsBlockTwoSides = isBlockTwoSides,
             WinnerId = string.Empty,
+            IsBotGame = match.IsBotGame,
         };
 
         CurrentMatches.Add(newMatch);
@@ -281,6 +286,11 @@ public class GameHub : Hub<IGameHubClient>
 
         await Clients.Clients(newMatch.Viewers.Select(v => v.Id)).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch.Row, newMatch.Column, true);
         Logger.LogInformation("Match restarted: {MatchId} between {Player1Id} and {Player2Id}", newMatch.Id, newMatch.Player1Id, newMatch.Player2Id);
+
+        if (newMatch.IsBotGame && newMatch.Player2Id == match.Player1Id)
+        {
+            await GetBotBestMove(newMatch);
+        }
     }
 
     public async Task SendMove(string row, string column, string matchId)
@@ -305,6 +315,40 @@ public class GameHub : Hub<IGameHubClient>
 
         await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(row, column, match.Player1Id == userId ? CellState.X.ToString() : CellState.O.ToString(), false);
         await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(row, column, !match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
+
+        if (match.IsBotGame && ((userId == match.Player1Id && !match.IsPlayer1Turn) || (userId == match.Player2Id && match.IsPlayer1Turn)))
+        {
+            await GetBotBestMove(match);
+        }
+    }
+
+    private async Task GetBotBestMove(SimpleMatch match)
+    {
+        var boardJagged = match.Board.ToArray().Select(row => row.Select(cell => cell == null ? 0 : cell.Value ? 1 : 2).ToArray()).ToArray();
+        var board = new int[boardJagged.Length, boardJagged[0].Length];
+        for (int i = 0; i < boardJagged.Length; i++)
+        {
+            for (int j = 0; j < boardJagged[i].Length; j++)
+            {
+                board[i, j] = boardJagged[i][j];
+            }
+        }
+        var userId = GetUserId();
+        int botPlayer = userId == match.Player1Id ? 2 : 1;
+
+        var botMove = BotService.GetBestMove(board, botPlayer);
+        if (botMove.r != -1 && botMove.c != -1)
+        {
+            match.Board[botMove.r][botMove.c] = botPlayer == 1;
+            match.PreviousMove = new SimpleMove
+            {
+                Row = botMove.r,
+                Col = botMove.c,
+            };
+            await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(botMove.r.ToString(), botMove.c.ToString(), match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), false);
+            await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(botMove.r.ToString(), botMove.c.ToString(), !match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
+            match.IsPlayer1Turn = !match.IsPlayer1Turn;
+        }
     }
 
     public string GetMark(string matchId)
@@ -405,6 +449,7 @@ public class GameHub : Hub<IGameHubClient>
             IsPlayer1Turn = match.IsPlayer1Turn,
             IsBlockTwoSides = match.IsBlockTwoSides,
             PreviousMove = match.PreviousMove,
+            IsBotGame = match.IsBotGame,
         };
     }
 
@@ -421,6 +466,7 @@ public class GameHub : Hub<IGameHubClient>
             IsPlayer1Turn = m.IsPlayer1Turn,
             IsBlockTwoSides = m.IsBlockTwoSides,
             PreviousMove = m.PreviousMove,
+            IsBotGame = m.IsBotGame,
         }).ToList());
     }
 
@@ -442,5 +488,51 @@ public class GameHub : Hub<IGameHubClient>
         }
 
         match.Viewers.Remove(currentUser);
+    }
+
+    public async Task<SimpleMatch> FindGameWithBot(int row, int column, bool isBlockTwoSides = false)
+    {
+        var currentUser = await Users.GetUserByIdAsync(Context.ConnectionId);
+        if (currentUser == null)
+        {
+            Logger.LogWarning("User not found: {UserId}", Context.ConnectionId);
+            throw new HubException("User not found.");
+        }
+
+        var existedMatch = FindExistedMatch(Context.ConnectionId);
+        if (!string.IsNullOrEmpty(existedMatch))
+        {
+            Logger.LogWarning("User {UserId} is already in a match: {MatchId}", currentUser.Id, existedMatch);
+            await Clients.Caller.ReceiveUserAlreadyInAMatch(existedMatch, currentUser.Id);
+            return null!;
+        }
+
+        var botName = BotNameHelper.GetBotName();
+        var botId = Guid.NewGuid().ToString();
+
+        var match = new SimpleMatch
+        {
+            Id = Guid.NewGuid().ToString(),
+            Row = row,
+            Column = column,
+            Player1Id = Context.ConnectionId,
+            Player1Name = currentUser.Name,
+            Player2Id = botId,
+            Player2Name = botName,
+            Board = [.. Enumerable.Range(0, row).Select(_ => new bool?[column])],
+            Viewers = [],
+            IsPlayer1Turn = true,
+            Result = MatchResult.Ongoing,
+            IsBlockTwoSides = isBlockTwoSides,
+            WinnerId = string.Empty,
+            IsBotGame = true,
+        };
+
+        CurrentMatches.Add(match);
+
+        await Clients.Clients(match.Player1Id).ReceiveMatchFound(botName, match.Id.ToString(), match.Row, match.Column, isBlockTwoSides, true);
+        await Clients.Clients(match.Player2Id).ReceiveMatchFound(currentUser.Name, match.Id.ToString(), match.Row, match.Column, isBlockTwoSides, true);
+
+        return match;
     }
 }

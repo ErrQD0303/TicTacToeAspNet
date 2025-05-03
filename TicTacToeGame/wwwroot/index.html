@@ -406,6 +406,9 @@
         <label for="block-two-sides-checkbox">Block Two Sides Rule:</label>
       </div>
       <button id="btn-start-game" style="display: block">Find Game</button>
+      <button id="btn-start-game-with-bot" style="display: block">
+        Play With Bot
+      </button>
       <button id="btn-exit-game" style="display: none">Exit Game</button>
       <button id="btn-reset-game" style="display: none">Reset Game</button>
       <button id="btn-match-list" style="display: block">
@@ -515,6 +518,9 @@
           welcomeMessage: document.getElementById("welcome-message"),
           boardSizeSelect: document.getElementById("board-size"),
           btnStartGame: document.getElementById("btn-start-game"),
+          btnStartGameWithBot: document.getElementById(
+            "btn-start-game-with-bot"
+          ),
           btnExitGame: document.getElementById("btn-exit-game"),
           btnResetGame: document.getElementById("btn-reset-game"),
           btnCloseMatchesList: document.getElementById(
@@ -603,6 +609,10 @@
             toggleOnlineUsersSidebar
           );
           elements.btnStartGame.addEventListener("click", findGame);
+          elements.btnStartGameWithBot.addEventListener(
+            "click",
+            findGameWithBot
+          );
           elements.btnExitGame.addEventListener("click", exitGame);
           elements.btnResetGame.addEventListener("click", handleResetGame);
           elements.btnMatchList.addEventListener("click", handleClickMatchList);
@@ -643,6 +653,69 @@
           // Window events
           window.addEventListener("unload", cleanup);
           document.addEventListener("click", handleDocumentClick);
+        }
+
+        async function findGameWithBot() {
+          const connection = await getSignalRConnection();
+          if (!connection) {
+            toastr.error(
+              "Failed to connect to the server. Please try again.",
+              "Server Error"
+            );
+            return;
+          }
+
+          try {
+            const match = await connection.invoke(
+              "FindGameWithBot",
+              +gameState.boardSize,
+              +gameState.boardSize,
+              gameState.isBlockTwoSides
+            );
+            if (match) {
+              if (!match?.isBotGame) {
+                toastr.error("Failed to find a game with the bot.", "Error");
+                return;
+              }
+              gameState.currentViewMatch = match;
+              gameState.currentGameId = match.id;
+              gameState.boardSize = match.row;
+              gameState.currentPlayer = null; // Example: Set current player to X
+              elements.boardSizeSelect.value = match.row;
+              gameState.board = Array.from(
+                { length: gameState.boardSize },
+                () => Array(gameState.boardSize).fill("")
+              );
+              gameState.gameOver = false;
+              gameState.previousMark = {
+                row: match?.previousMove?.row || -1,
+                col: match?.previousMove?.col || -1,
+                isPlayer1Turn: match.isPlayer1Turn,
+              };
+              gameState.isBlockTwoSides = match.isBlockTwoSides;
+              elements.blockTwoSidesCheckbox.checked = match.isBlockTwoSides;
+              match.board.forEach((row, rowIndex) => {
+                row.forEach((cell, colIndex) => {
+                  gameState.board[rowIndex][colIndex] =
+                    cell === true ? "X" : cell === false ? "O" : "";
+                });
+              });
+              gameState.opponent;
+
+              updateTitle();
+              resizeCanvas();
+              drawBoard();
+              elements.status.textContent = `You are playing against the bot`;
+              elements.btnStartGame.style.display = "none";
+              elements.btnStartGameWithBot.style.display = "none";
+              elements.btnResetGame.style.display = "none";
+              elements.btnExitGame.style.display = "block";
+              elements.playingMatchList.style.display = "none";
+            }
+          } catch (err) {
+            console.error(err);
+            toastr.error("Failed to find a game with the bot.", "Error");
+          }
         }
 
         function handleBlockTwoSidesChange() {
@@ -754,7 +827,6 @@
                     cell === true ? "X" : cell === false ? "O" : "";
                 });
               });
-              console.log(gameState.board, match);
 
               updateTitle();
               resizeCanvas();
@@ -920,7 +992,7 @@
           ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
           ctx.restore();
 
-          // Apply zoom/pan transformations
+          // Apply zoom/pan transformations, BotType botType = BotType.Gomoku
           ctx.save();
           ctx.setTransform(scale, 0, 0, scale, originX, originY);
 
@@ -1088,8 +1160,8 @@
             }
 
             // Check backward
-            r = row - deltaRow;
-            c = col - deltaColumn;
+            r = +row - deltaRow;
+            c = +col - deltaColumn;
             while (isValidCell(r, c)) {
               if (gameState.board[r][c] !== player) {
                 if (blockTwoSides && gameState.board[r][c] !== "") {
@@ -1148,6 +1220,7 @@
           elements.btnResetGame.style.display = "block";
           elements.btnExitGame.style.display = "none";
           elements.btnStartGame.style.display = "block";
+          elements.btnStartGameWithBot.style.display = "block";
           elements.userSidebar.classList.add("open");
         }
 
@@ -1156,6 +1229,7 @@
           sizeSelect.value = gameState.boardSize;
           const row = parseInt(sizeSelect.value);
           const column = parseInt(sizeSelect.value);
+          gameState.isBlockTwoSides = elements.blockTwoSidesCheckbox.checked;
           try {
             await gameState.connection.invoke(
               "Restart",
@@ -1227,6 +1301,7 @@
           elements.btnResetGame.style.display = "none";
           elements.btnExitGame.style.display = "block";
           elements.btnStartGame.style.display = "block";
+          elements.btnStartGameWithBot.style.display = "block";
           elements.userSidebar.classList.add("open");
         }
 
@@ -1317,6 +1392,7 @@
               gameState.currentViewMatch = null;
               elements.status.textContent = "Exited game.";
               elements.btnStartGame.style.display = "block";
+              elements.btnStartGameWithBot.style.display = "block";
               elements.btnExitGame.style.display = "none";
               elements.btnResetGame.style.display = "none";
             } catch (err) {
@@ -1333,6 +1409,7 @@
             gameState.currentGameId = null;
             elements.status.textContent = "Exited game.";
             elements.btnStartGame.style.display = "block";
+            elements.btnStartGameWithBot.style.display = "block";
             elements.btnExitGame.style.display = "none";
             elements.btnResetGame.style.display = "none";
           } catch (err) {
@@ -1365,12 +1442,15 @@
             resetBtn: elements.btnResetGame.style.display,
             exitBtn: elements.btnExitGame.style.display,
             startBtn: elements.btnStartGame.style.display,
+            startWithBotBtn: elements.btnStartGameWithBot.style.display,
           };
           updateButtonVisibility();
 
           elements.btnResetGame.style.display = previousBtnState.resetBtn;
           elements.btnExitGame.style.display = previousBtnState.exitBtn;
           elements.btnStartGame.style.display = previousBtnState.startBtn;
+          elements.btnStartGameWithBot.style.display =
+            previousBtnState.startWithBotBtn;
         }
 
         function updateButtonVisibility() {
@@ -1399,6 +1479,8 @@
               elements.btnExitGame.style.display = "block";
               elements.btnResetGame.style.display = "none";
               elements.btnStartGame.style.display = "none";
+              elements.btnStartGameWithBot.style.display = "none";
+              elements.boardSizeSelect.style.display = "block";
               elements.btnLogout.style.display = "block";
             } else {
               elements.status.textContent =
@@ -1433,7 +1515,8 @@
           gameId,
           row,
           col,
-          isBlockTwoSides
+          isBlockTwoSides,
+          isBotGame
         ) {
           gameState.currentGameId = gameId;
           const result = await getMark();
@@ -1456,7 +1539,11 @@
           );
 
           elements.yourName.textContent = `${gameState.currentUser?.name}`;
-          elements.opponentName.textContent = `${gameState.opponent.name}`;
+          if (!isBotGame) {
+            elements.opponentName.textContent = `${gameState.opponent.name}`;
+          } else {
+            elements.opponentName.textContent = `🤖 ${gameState.opponent.name}`;
+          }
 
           toastr.info(
             `You are playing against ${opponent}. Your mark is ${gameState.currentPlayer}`,

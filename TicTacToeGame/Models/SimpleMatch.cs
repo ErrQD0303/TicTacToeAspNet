@@ -19,4 +19,5 @@ public class SimpleMatch
     public int Column { get; set; } = default!;
     public bool IsBlockTwoSides { get; set; } = default!;
     public List<SimpleUser> Viewers { get; set; } = default!;
+    public bool IsBotGame { get; set; } = false;
 }
