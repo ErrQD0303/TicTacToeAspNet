@@ -196,21 +196,28 @@ public class GomokuBot
         }
 
         // Assign heuristic values
-        int lineScore = (int)(count switch
+        // Special case: handle lines with 4 or more stones
+        if (count >= 4)
         {
-            >= 5 => GameScoreLine.Win,
-            4 when openStart && openEnd => GameScoreLine.Open_Four,
-            4 when openStart || openEnd => GameScoreLine.Close_Four,
-            3 when openStart && openEnd => GameScoreLine.Open_Three,
-            3 when openStart || openEnd => GameScoreLine.Close_Three,
-            2 when openStart && openEnd => GameScoreLine.Open_Two,
-            2 when openStart || openEnd => GameScoreLine.Close_Two,
-            1 when openStart && openEnd => GameScoreLine.Line_Score,
-            _ => GameScoreLine.No_Score // No score for this line
-        });
+            return count >= 5
+            ? (isPlayer ? (int)GameScoreLine.Win : -(int)GameScoreLine.Win) // Immediate win for 5+ stones
+            : (openStart && openEnd
+                ? (isPlayer ? (int)GameScoreLine.Open_Four : -(int)GameScoreLine.Open_Four) // Open four
+                : (isPlayer ? (int)GameScoreLine.Close_Four : -(int)GameScoreLine.Close_Four)); // Closed four
+        }
 
-        // Player's patterns are positive, opponent's are negative
-        return isPlayer ? lineScore : -lineScore; // Return the score of the line
+        // Handle shorter lines with heuristic scoring
+        int lineScore = count switch
+        {
+            3 when openStart && openEnd => (int)GameScoreLine.Open_Three,
+            3 when openStart || openEnd => (int)GameScoreLine.Close_Three,
+            2 when openStart && openEnd => (int)GameScoreLine.Open_Two,
+            2 when openStart || openEnd => (int)GameScoreLine.Close_Two,
+            1 when openStart && openEnd => (int)GameScoreLine.Line_Score,
+            _ => (int)GameScoreLine.No_Score
+        };
+
+        return isPlayer ? lineScore : -lineScore;
     }
 
     /// <summary>
@@ -301,12 +308,12 @@ public class GomokuBot
 public enum GameScoreLine
 {
     Win = 10_000_000,
-    Open_Four = 1_000_000,
-    Close_Four = 100_000,
-    Open_Three = 10_000,
-    Close_Three = 1_000,
-    Open_Two = 100,
-    Close_Two = 10,
+    Open_Four = 5_000_000,    // Increased from 1M to 5M
+    Close_Four = 1_000_000,   // Increased from 100K to 1M
+    Open_Three = 100_000,     // Reduced from 10K to 100K
+    Close_Three = 10_000,     // Reduced from 1K to 10K
+    Open_Two = 1_000,         // Reduced from 100 to 1K
+    Close_Two = 100,          // Reduced from 10 to 100
     Line_Score = 1,
     No_Score = 0
 }
