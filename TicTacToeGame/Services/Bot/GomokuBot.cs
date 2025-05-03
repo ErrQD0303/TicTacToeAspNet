@@ -2,7 +2,7 @@ namespace TicTacToeGame.Services.Bot;
 
 public class GomokuBot
 {
-    private const int DEFAULT_SEARCH_DEPTH = 3;
+    private const int DEFAULT_SEARCH_DEPTH = 5;
 
     // Directions for scanning lines: horiz, vert, diag \ and diag /
     private static readonly (int dr, int dc)[] Directions = {
@@ -301,7 +301,7 @@ public class GomokuBot
 public enum GameScoreLine
 {
     Win = 10_000_000,
-    Open_Four = 1_000_0000,
+    Open_Four = 1_000_000,
     Close_Four = 100_000,
     Open_Three = 10_000,
     Close_Three = 1_000,

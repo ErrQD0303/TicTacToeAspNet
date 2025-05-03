@@ -505,6 +505,7 @@
             opponent: 0,
           },
           isBlockTwoSides: false,
+          isBotGame: false,
         };
 
         // DOM Elements
@@ -677,7 +678,6 @@
                 toastr.error("Failed to find a game with the bot.", "Error");
                 return;
               }
-              gameState.currentViewMatch = match;
               gameState.currentGameId = match.id;
               gameState.boardSize = match.row;
               gameState.currentPlayer = null; // Example: Set current player to X
@@ -1407,6 +1407,7 @@
               gameState.currentGameId
             );
             gameState.currentGameId = null;
+            gameState.currentViewMatch = null;
             elements.status.textContent = "Exited game.";
             elements.btnStartGame.style.display = "block";
             elements.btnStartGameWithBot.style.display = "block";
@@ -1455,6 +1456,7 @@
 
         function updateButtonVisibility() {
           elements.btnStartGame.style.display = "none";
+          elements.btnStartGameWithBot.style.display = "none";
           elements.btnExitGame.style.display = "block";
           elements.btnResetGame.style.display = "block";
         }
@@ -1510,32 +1512,39 @@
           }
         }
 
-        async function receiveMatchFound(
-          opponent,
-          gameId,
-          row,
-          col,
-          isBlockTwoSides,
-          isBotGame
-        ) {
-          gameState.currentGameId = gameId;
+        async function receiveMatchFound(opponent, match) {
+          if (!match) {
+            toastr.error("Failed to find a game.", "Error");
+            return;
+          }
+          gameState.currentGameId = match.id;
+          const isPlayer1 = gameState.currentUser?.id === match.player1Id;
+          gameState.isBotGame = match.isBotGame;
+          if (isPlayer1) {
+            opponent = match.player2name;
+          } else {
+            opponent = match.player1name;
+            if (match.isBotGame) {
+              await triggerBotMove();
+            }
+          }
           const result = await getMark();
           if (result === null) return;
 
           gameState.currentPlayer = result;
           elements.status.textContent = `You play as ${result}`;
-          elements.boardSizeSelect.value = row;
-          gameState.boardSize = row;
+          elements.boardSizeSelect.value = match.row;
+          gameState.boardSize = match.row;
           gameState.board = Array.from({ length: gameState.boardSize }, () =>
             Array(gameState.boardSize).fill("")
           );
           gameState.gameOver = false;
           gameState.previousMark = { row: -1, col: -1 };
-          gameState.isBlockTwoSides = isBlockTwoSides;
-          elements.blockTwoSidesCheckbox.checked = isBlockTwoSides;
+          gameState.isBlockTwoSides = match.isBlockTwoSides;
+          elements.blockTwoSidesCheckbox.checked = match.isBlockTwoSides;
           await resetGame();
           gameState.opponent = gameState.onlineUsers.find(
-            ({ name }) => name === opponent
+            ({ id }) => id === gameState.opponentId
           );
 
           elements.yourName.textContent = `${gameState.currentUser?.name}`;
@@ -1550,7 +1559,30 @@
             "Match Found"
           );
           updateButtonVisibility();
+          elements.btnStartGame.style.display = "none";
+          elements.btnStartGameWithBot.style.display = "none";
+          elements.btnExitGame.style.display = "block";
+          elements.btnResetGame.style.display = "block";
+          elements.btnLogout.style.display = "block";
+          elements.boardSizeSelect.disabled = true;
           elements.userSidebar.classList.remove("open");
+        }
+
+        async function triggerBotMove() {
+          const connection = await getSignalRConnection();
+          if (!connection) {
+            toastr.error(
+              "Failed to connect to the server. Please try again.",
+              "Server Error"
+            );
+            return;
+          }
+          try {
+            await connection.invoke("TriggerBotMove", gameState.currentGameId);
+          } catch (err) {
+            console.error(err);
+            toastr.error("Failed to trigger bot move.", "Error");
+          }
         }
 
         function receiveUserAlreadyInAMatch(gameId, opponent) {
@@ -1571,21 +1603,50 @@
         async function receiveMatchRestart(
           newGameId,
           message,
-          row,
-          column,
+          newMatch,
           isViewer
         ) {
-          toastr.info(message, "Match Restarted");
+          try {
+            toastr.info(message, "Match Restarted");
 
-          gameState.currentGameId = newGameId;
-          elements.boardSizeSelect.value = row;
-          await resetGame();
-          if (isViewer) {
-            elements.status.textContent = `You are viewing the match between ${gameState.opponent.name} and ${gameState.currentUser.name}`;
-          } else {
-            elements.status.textContent = `Match restarted. You are ${gameState.currentPlayer}`;
+            gameState.currentGameId = newGameId;
+            gameState.isBotGame = newMatch.isBotGame;
+            gameState.boardSize = newMatch.row;
+            gameState.board = Array.from({ length: gameState.boardSize }, () =>
+              Array(gameState.boardSize).fill("")
+            );
+            gameState.gameOver = false;
+            gameState.previousMark = { row: -1, col: -1 };
+            gameState.isBlockTwoSides = newMatch.isBlockTwoSides;
+            elements.blockTwoSidesCheckbox.checked = newMatch.isBlockTwoSides;
+
+            elements.boardSizeSelect.value = newMatch.row;
+            await resetGame();
+            if (isViewer) {
+              elements.status.textContent = `You are viewing the match between ${gameState.opponent.name} and ${gameState.currentUser.name}`;
+            } else {
+              elements.status.textContent = `Match restarted. You are ${gameState.currentPlayer}`;
+            }
+            elements.userSidebar.classList.remove("open");
+            elements.btnExitGame.style.display = "block";
+            elements.btnResetGame.style.display = "block";
+            elements.btnStartGame.style.display = "block";
+            elements.btnStartGameWithBot.style.display = "block";
+
+            // If it's not a bot game and the current user is not player 1, trigger bot move
+            if (
+              !gameState.isBotGame ||
+              newMatch.player1Id === gameState.currentUser.id
+            ) {
+              return;
+            }
+
+            await triggerBotMove(); // Trigger bot move if it's a bot game
+            elements.btnStartGameWithBot.style.display = "none";
+          } catch (err) {
+            console.error(err.toString());
+            toastr.error("Failed to restart the match.", "Error");
           }
-          elements.userSidebar.classList.remove("open");
         }
 
         function receiveSetNameSuccess(id, name) {
@@ -1737,6 +1798,10 @@
               );
             }
           }
+
+          if (gameState.gameOver || !gameState.isBotGame) return;
+
+          await triggerBotMove(); // Trigger bot move if it's a bot game
         }
 
         // Game Loop

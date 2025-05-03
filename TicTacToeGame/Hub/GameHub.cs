@@ -163,8 +163,8 @@ public class GameHub : Hub<IGameHubClient>
         CurrentMatches.Add(match);
         Logger.LogInformation("Match created: {MatchId} between {Player1Id} and {Player2Id}", match.Id, match.Player1Id, match.Player2Id);
 
-        await Clients.Clients(match.Player1Id).ReceiveMatchFound(player2?.Name ?? "", match.Id.ToString(), match.Row, match.Column, isBlockTwoSides);
-        await Clients.Clients(match.Player2Id).ReceiveMatchFound(player1?.Name ?? "", match.Id.ToString(), match.Row, match.Column, isBlockTwoSides);
+        await Clients.Clients(match.Player1Id).ReceiveMatchFound(player2?.Name ?? "", match);
+        await Clients.Clients(match.Player2Id).ReceiveMatchFound(player1?.Name ?? "", match);
         return;
     }
 
@@ -277,20 +277,51 @@ public class GameHub : Hub<IGameHubClient>
             IsBlockTwoSides = isBlockTwoSides,
             WinnerId = string.Empty,
             IsBotGame = match.IsBotGame,
+            PreviousMove = new SimpleMove
+            {
+                Row = -1,
+                Col = -1
+            }
         };
 
         CurrentMatches.Add(newMatch);
 
         var currentUser = await Users.GetUserByIdAsync(userId);
-        await Clients.Clients([newMatch.Player1Id, newMatch.Player2Id]).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch.Row, newMatch.Column);
+        await Clients.Clients([newMatch.Player1Id, newMatch.Player2Id]).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch);
 
-        await Clients.Clients(newMatch.Viewers.Select(v => v.Id)).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch.Row, newMatch.Column, true);
+        await Clients.Clients(newMatch.Viewers.Select(v => v.Id)).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch, true);
         Logger.LogInformation("Match restarted: {MatchId} between {Player1Id} and {Player2Id}", newMatch.Id, newMatch.Player1Id, newMatch.Player2Id);
+    }
 
-        if (newMatch.IsBotGame && newMatch.Player2Id == match.Player1Id)
+    public async Task TriggerBotMove(string matchId)
+    {
+        var userId = GetUserId();
+        var match = CurrentMatches.FirstOrDefault(m => m.Id.ToString() == matchId && (m.Player1Id == userId || m.Player2Id == userId));
+        if (match == null)
         {
-            await GetBotBestMove(newMatch);
+            Logger.LogWarning("Match not found: {MatchId}", matchId);
+            throw new HubException("Match not found.");
         }
+
+        if (match.Result != MatchResult.Ongoing)
+        {
+            Logger.LogWarning("Match is not ongoing: {MatchId}", matchId);
+            throw new HubException("Match is not ongoing.");
+        }
+
+        if (!match.IsBotGame)
+        {
+            Logger.LogWarning("Match is not a bot game: {MatchId}", matchId);
+            throw new HubException("Match is not a bot game.");
+        }
+
+        if ((match.Player1Id == userId && match.IsPlayer1Turn) || (match.Player2Id == userId && !match.IsPlayer1Turn))
+        {
+            Logger.LogWarning("It's not bot turn");
+            throw new HubException("It's not bot turn.");
+        }
+
+        await GetBotBestMove(match);
     }
 
     public async Task SendMove(string row, string column, string matchId)
@@ -315,11 +346,6 @@ public class GameHub : Hub<IGameHubClient>
 
         await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(row, column, match.Player1Id == userId ? CellState.X.ToString() : CellState.O.ToString(), false);
         await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(row, column, !match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
-
-        if (match.IsBotGame && ((userId == match.Player1Id && !match.IsPlayer1Turn) || (userId == match.Player2Id && match.IsPlayer1Turn)))
-        {
-            await GetBotBestMove(match);
-        }
     }
 
     private async Task GetBotBestMove(SimpleMatch match)
@@ -530,8 +556,8 @@ public class GameHub : Hub<IGameHubClient>
 
         CurrentMatches.Add(match);
 
-        await Clients.Clients(match.Player1Id).ReceiveMatchFound(botName, match.Id.ToString(), match.Row, match.Column, isBlockTwoSides, true);
-        await Clients.Clients(match.Player2Id).ReceiveMatchFound(currentUser.Name, match.Id.ToString(), match.Row, match.Column, isBlockTwoSides, true);
+        await Clients.Clients(match.Player1Id).ReceiveMatchFound(botName, match);
+        await Clients.Clients(match.Player2Id).ReceiveMatchFound(currentUser.Name, match);
 
         return match;
     }
