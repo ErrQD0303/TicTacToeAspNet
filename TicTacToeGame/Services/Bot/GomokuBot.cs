@@ -309,8 +309,8 @@ public enum GameScoreLine
 {
     Win = 10_000_000,
     Open_Four = 5_000_000,    // Increased from 1M to 5M
-    Close_Four = 1_000_000,   // Increased from 100K to 1M
-    Open_Three = 100_000,     // Reduced from 10K to 100K
+    Close_Four = 3_000_000,   // Increased from 100K to 1M
+    Open_Three = 2_000_000,     // Reduced from 10K to 100K
     Close_Three = 10_000,     // Reduced from 1K to 10K
     Open_Two = 1_000,         // Reduced from 100 to 1K
     Close_Two = 100,          // Reduced from 10 to 100
