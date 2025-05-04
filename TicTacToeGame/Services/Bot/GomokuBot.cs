@@ -1,56 +1,68 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text;
+
 namespace TicTacToeGame.Services.Bot;
 
 public class GomokuBot
 {
-    private const int DEFAULT_SEARCH_DEPTH = 4;
+    private const int DEFAULT_SEARCH_DEPTH = 3;
+    private static readonly ConcurrentDictionary<ulong, (int score, int depth)> TranspositionTable = new();
+    private static ZobristHash zobristHasher;
 
     // Directions for scanning lines: horiz, vert, diag \ and diag /
     private static readonly (int dr, int dc)[] Directions = {
         (0,1), (1,0), (1,1), (1,-1)
     };
 
-    /// <summary>
-    /// Entry point: returns the best move (r = row, c = column) for the 'player' 1 or 2.
-    /// </summary>
-    /// <param name="board">The current state of the board.</param>
-    /// <param name="player">The player number (1 or 2).</param>
-    /// <param name="depth">The search depth for the AI.</param>
-    /// <param name="blockTwoSides">Whether to block two sides.</param>
-    /// <returns>The best move as a Point object.</returns>
+    static GomokuBot()
+    {
+        // Initialize Zobrist hashing with random numbers
+        zobristHasher = new ZobristHash(15, 15); // Assuming max 15x15 board
+    }
+
     public static Point GetBestMove(int[,] board, int player, int depth = DEFAULT_SEARCH_DEPTH, bool blockTwoSides = false)
     {
+        var stopwatch = Stopwatch.StartNew();
         var bestScore = int.MinValue;
         Point bestMove = new(-1, -1);
         var moves = GenerateCandidateMoves(board);
 
-        foreach (var move in moves)
+        // Try center first if board is empty
+        if (moves.Count > 10 && board.Cast<int>().All(c => c == 0))
         {
-            board[move.r, move.c] = player; // Simulate the move
-            int score = Minimax(board, depth - 1, false, player, int.MinValue, int.MaxValue, blockTwoSides);
-            board[move.r, move.c] = 0; // Undo the move
-
-            if (score > bestScore)
-            {
-                bestScore = score; // Update the best score
-                bestMove = move; // Update the best move
-            }
+            int centerR = board.GetLength(0) / 2;
+            int centerC = board.GetLength(1) / 2;
+            return new Point(centerR, centerC);
         }
 
-        return bestMove; // Return the best move found
+        // Parallel move evaluation
+        Parallel.ForEach(moves, (move, state) =>
+        {
+            board[move.r, move.c] = player;
+            int score = Minimax(board, depth - 1, false, player, int.MinValue, int.MaxValue, blockTwoSides);
+            board[move.r, move.c] = 0;
+
+            lock (moves)
+            {
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestMove = move;
+
+                    // Early termination if we found a winning move
+                    if (bestScore >= (int)GameScoreLine.Win * 0.9)
+                    {
+                        state.Break();
+                    }
+                }
+            }
+        });
+
+        Debug.WriteLine($"Move calculation took {stopwatch.ElapsedMilliseconds}ms");
+        return bestMove;
     }
 
-    /// <summary> 
-    /// Minimax with α–β pruning. 
-    /// </summary>
-    /// <param name="board">The current state of the board.</param>
-    /// <param name="depth">The current depth of the search.</param>
-    /// <param name="maximizing">True if maximizing player, false if minimizing.</param>
-    /// <param name="player">The player number (1 or 2).</param>
-    /// <param name="alpha">The minimum value for α–β pruning.</param>
-    /// <param name="beta">The maximum value for α–β pruning.</param>
-    /// <param name="blockTwoSides">Whether to block two sides.</param>
-    /// <returns>The score of the board state.</returns>
-    /// <remarks>Assumes the board is rectangular.</remarks>
     private static int Minimax(int[,] board, int depth, bool maximizing, int player, int alpha, int beta, bool blockTwoSides)
     {
         int conditionToWin = (int)(Math.Min(board.GetLength(0), board.GetLength(1)) switch
@@ -62,58 +74,116 @@ public class GomokuBot
             1 => GameScoreLine.Line_Score,
             _ => GameScoreLine.No_Score
         });
-        int opponent = 3 - player; // Switch player (1 -> 2, 2 -> 1) (because 1 + 2 = 3)
-        // Terminal evaluation of deptph limit
-        int eval = EvaluateBoard(board, player);
-        // Check if the winning condition is met ( > Immediate Win = 10_000_000)
-        if (depth == 0 || Math.Abs(eval) >= conditionToWin)
+
+        int opponent = 3 - player;
+        ulong boardHash = zobristHasher.Hash(board);
+
+        // Check transposition table
+        if (TranspositionTable.TryGetValue(boardHash, out var entry) && entry.depth >= depth)
         {
-            return eval; // Return the evaluation score
+            return entry.score;
         }
 
-        var moves = GenerateCandidateMoves(board); // Generate candidate moves
-        if (moves.Count == 0)
+        int eval = EvaluateBoard(board, maximizing ? player : opponent);
+        int currentThreat = Math.Abs(eval);
+
+        // Dynamic depth extension
+        int extraDepth = currentThreat >= (int)GameScoreLine.Close_Four ? 2 :
+                        currentThreat >= (int)GameScoreLine.Open_Three ? 1 : 0;
+
+        // Terminal conditions
+        if (depth + extraDepth <= 0 || currentThreat >= conditionToWin)
         {
-            return 0; // draw
+            return eval;
         }
 
+        var moves = GenerateCandidateMoves(board);
+        if (moves.Count == 0) return 0;
+
+        // Move ordering with priority queue
+        var moveQueue = new PriorityQueue<Point, int>();
+        foreach (var move in moves)
+        {
+            int priority = EvaluateMove(board, move.r, move.c, maximizing ? player : opponent);
+            moveQueue.Enqueue(move, maximizing ? -priority : priority); // Higher priority first
+        }
+
+        int result;
         if (maximizing)
         {
             int maxEval = int.MinValue;
-            foreach (var move in moves)
+            while (moveQueue.TryDequeue(out var move, out _))
             {
-                board[move.r, move.c] = player; // Simulate the move
+                board[move.r, move.c] = player;
                 int score = Minimax(board, depth - 1, false, player, alpha, beta, blockTwoSides);
                 board[move.r, move.c] = 0;
-                maxEval = Math.Max(maxEval, score); // Update the maximum evaluation
-                alpha = Math.Max(alpha, score); // Update alpha
-                if (beta <= alpha)
-                { // alpha >= beta which means we can prune the search tree
-                    break; // Beta cut-off
-                }
+                maxEval = Math.Max(maxEval, score);
+                alpha = Math.Max(alpha, score);
+                if (beta <= alpha) break;
             }
-
-            return maxEval; // Return the maximum evaluation
+            result = maxEval;
         }
         else
         {
             int minEval = int.MaxValue;
-            foreach (var move in moves)
+            while (moveQueue.TryDequeue(out var move, out _))
             {
-                board[move.r, move.c] = opponent; // Simulate the move
+                board[move.r, move.c] = opponent;
                 int score = Minimax(board, depth - 1, true, player, alpha, beta, blockTwoSides);
-                board[move.r, move.c] = 0; // Undo the move
-                minEval = Math.Min(minEval, score); // Update the minimum evaluation
-                beta = Math.Min(beta, score); // Update beta
-                if (beta <= alpha)
-                { // alpha >= beta which means we can prune the search tree
-                    break; // Alpha cut-off
-                }
+                board[move.r, move.c] = 0;
+                minEval = Math.Min(minEval, score);
+                beta = Math.Min(beta, score);
+                if (beta <= alpha) break;
             }
+            result = minEval;
+        }
 
-            return minEval; // Return the minimum evaluation
+        // Store in transposition table
+        TranspositionTable[boardHash] = (result, depth);
+        return result;
+    }
+
+    private static int EvaluateMove(int[,] board, int row, int col, int player)
+    {
+        board[row, col] = player;
+        int score = EvaluateBoard(board, player);
+        board[row, col] = 0;
+        return score;
+    }
+
+    // Add this class for Zobrist hashing
+    private class ZobristHash
+    {
+        private readonly ulong[,,] table;
+        private readonly ulong[] playerToMove;
+
+        public ZobristHash(int maxRows, int maxCols)
+        {
+            var random = new Random();
+            table = new ulong[maxRows, maxCols, 3]; // 0=empty, 1=player1, 2=player2
+            playerToMove = new ulong[3];
+
+            for (int r = 0; r < maxRows; r++)
+                for (int c = 0; c < maxCols; c++)
+                    for (int p = 0; p < 3; p++)
+                        table[r, c, p] = (ulong)random.NextInt64();
+
+            for (int p = 0; p < 3; p++)
+                playerToMove[p] = (ulong)random.NextInt64();
+        }
+
+        public ulong Hash(int[,] board)
+        {
+            ulong hash = 0;
+            for (int r = 0; r < board.GetLength(0); r++)
+                for (int c = 0; c < board.GetLength(1); c++)
+                    hash ^= table[r, c, board[r, c]];
+            return hash;
         }
     }
+
+    // Rest of your existing methods (EvaluateBoard, ScoreLine, GenerateCandidateMoves, etc.)
+    // can remain largely the same, but consider adding incremental evaluation
 
     /// <summary>
     /// Heuristic evaluation: scans the board, sums up pattern scores.
