@@ -11,17 +11,23 @@ public class BotService : IBotService
 
     public Point GetBestMove(int[,] board, int player, BotType botType = BotType.Gomoku)
     {
-        return botType switch
+        if (botType == BotType.TicTacToe)
         {
-            BotType.TicTacToe => FirstEmptyCellBot.GetBestMove(board, player),
-            BotType.Gomoku => GomokuBot.GetBestMove(board, player),
-            _ => throw new ArgumentOutOfRangeException(nameof(botType), botType, null)
-        };
+            return FirstEmptyCellBot.GetBestMove(board, player, true);
+        }
+        else if (botType == BotType.GomokuAI)
+        {
+            var result = new GomokuAI(board, player).GetMove();
+            return new Point(result.Y, result.X); // Convert to Point (Y, X) format
+        }
+
+        throw new ArgumentException("Invalid bot type");
     }
 }
 
 public enum BotType
 {
     TicTacToe,
-    Gomoku
+    Gomoku,
+    GomokuAI
 }

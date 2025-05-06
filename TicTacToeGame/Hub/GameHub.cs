@@ -5,6 +5,7 @@ using TicTacToeGame.Helpers.Enum;
 using TicTacToeGame.Helpers.Mappers;
 using TicTacToeGame.Models;
 using TicTacToeGame.Services;
+using TicTacToeGame.Services.Bot;
 using TicTacToeGame.Services.Interfaces;
 
 namespace TicTacToeGame.Hub;
@@ -343,6 +344,7 @@ public class GameHub : Hub<IGameHubClient>
             Row = int.Parse(row),
             Col = int.Parse(column),
         };
+        Logger.LogInformation("User {0} made a move at {Row}, {Col}", userId, row, column);
 
         await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(row, column, match.Player1Id == userId ? CellState.X.ToString() : CellState.O.ToString(), false);
         await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(row, column, !match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
@@ -362,10 +364,12 @@ public class GameHub : Hub<IGameHubClient>
         var userId = GetUserId();
         int botPlayer = userId == match.Player1Id ? 2 : 1;
 
-        var botMove = BotService.GetBestMove(board, botPlayer);
+        Logger.LogInformation("Bot is making a move for player {Player}", botPlayer);
+        var botMove = BotService.GetBestMove(board, botPlayer, BotType.GomokuAI);
         if (botMove.r != -1 && botMove.c != -1)
         {
             match.Board[botMove.r][botMove.c] = botPlayer == 1;
+            Logger.LogInformation("Bot move: {Row}, {Col}", botMove.r, botMove.c);
             match.PreviousMove = new SimpleMove
             {
                 Row = botMove.r,
