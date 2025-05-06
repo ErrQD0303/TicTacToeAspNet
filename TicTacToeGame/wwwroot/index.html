@@ -504,6 +504,7 @@
           },
           isBlockTwoSides: false,
           isBotGame: false,
+          isYourTurn: false,
         };
 
         // DOM Elements
@@ -1464,6 +1465,8 @@
           if (!gameState.board[row][col] && !gameState.gameOver) {
             if (!setBoardCell(row, col, player)) return;
 
+            gameState.isYourTurn = !gameState.isYourTurn;
+
             gameState.previousMark = { row: +row, col: +col };
             animateMark(player, col, row);
 
@@ -1520,8 +1523,10 @@
           gameState.isBotGame = match.isBotGame;
           if (isPlayer1) {
             opponent = match.player2name;
+            gameState.isYourTurn = true;
           } else {
             opponent = match.player1name;
+            gameState.isYourTurn = false;
             if (match.isBotGame) {
               await triggerBotMove();
             }
@@ -1608,6 +1613,8 @@
             toastr.info(message, "Match Restarted");
 
             gameState.currentGameId = newGameId;
+            const isPlayer1 = gameState.currentUser?.id === newMatch.player1Id;
+            gameState.isYourTurn = isPlayer1;
             gameState.isBotGame = newMatch.isBotGame;
             gameState.boardSize = newMatch.row;
             gameState.board = Array.from({ length: gameState.boardSize }, () =>
@@ -1688,6 +1695,7 @@
         }
 
         async function sendMove(row, col, matchId) {
+          if (!gameState.isYourTurn) return false;
           try {
             await gameState.connection.invoke(
               "SendMove",
@@ -1695,6 +1703,7 @@
               col + "",
               matchId
             );
+            gameState.isYourTurn = false;
             return true;
           } catch (err) {
             console.error(err.toString());

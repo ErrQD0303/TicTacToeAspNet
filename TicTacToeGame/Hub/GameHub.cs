@@ -376,7 +376,7 @@ public class GameHub : Hub<IGameHubClient>
                 Col = botMove.c,
             };
             await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(botMove.r.ToString(), botMove.c.ToString(), match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), false);
-            await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(botMove.r.ToString(), botMove.c.ToString(), !match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
+            await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(botMove.r.ToString(), botMove.c.ToString(), match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
             match.IsPlayer1Turn = !match.IsPlayer1Turn;
         }
     }

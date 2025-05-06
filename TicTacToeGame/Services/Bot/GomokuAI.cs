@@ -279,6 +279,7 @@ public class GomokuAI
 
         if (moves.Count == 0 && b[rows / 2, cols / 2] == 0)
             moves.Add(new Point(cols / 2, rows / 2));
+
         return moves;
     }
 }
