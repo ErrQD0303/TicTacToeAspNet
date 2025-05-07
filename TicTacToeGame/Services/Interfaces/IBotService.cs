@@ -4,5 +4,6 @@ namespace TicTacToeGame.Services.Interfaces;
 
 public interface IBotService
 {
-    Point GetBestMove(int[,] board, int player, BotType botType = BotType.Gomoku);
+    void InitializeBoard(string userId, int[,] board, int player, bool blockTwoSides = false);
+    Point GetMove(string userId, Point move, int player);
 }

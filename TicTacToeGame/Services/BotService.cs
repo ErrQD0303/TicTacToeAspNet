@@ -5,23 +5,39 @@ namespace TicTacToeGame.Services;
 
 public class BotService : IBotService
 {
+    private static readonly Dictionary<string, GomokuAI> GomokuAIs = [];
+    private static int CurrentRow;
+    private static int CurrentColumn;
     public BotService()
     {
     }
 
-    public Point GetBestMove(int[,] board, int player, BotType botType = BotType.Gomoku)
+    public Point GetMove(string userId, Point opponentMove, int player)
     {
-        if (botType == BotType.TicTacToe)
+        var gomokuAi = GomokuAIs[userId];
+        if (gomokuAi == null)
         {
-            return FirstEmptyCellBot.GetBestMove(board, player, true);
-        }
-        else if (botType == BotType.GomokuAI)
-        {
-            var result = new GomokuAI(board, player).GetMove();
-            return new Point(result.Y, result.X); // Convert to Point (Y, X) format
+            throw new InvalidOperationException("GomokuAI is not initialized. Call InitializeBoard first.");
         }
 
-        throw new ArgumentException("Invalid bot type");
+        if (opponentMove.r >= 0 && opponentMove.r < CurrentRow && opponentMove.c >= 0 && opponentMove.c < CurrentColumn)
+        {
+            // Valid move
+            gomokuAi.UpdateBoard(opponentMove, 3 - player);
+        }
+
+        var playerMove = gomokuAi.GetMove() ?? throw new InvalidOperationException("No valid move found.");
+        gomokuAi.UpdateBoard(playerMove, player);
+        return playerMove;
+    }
+
+    public void InitializeBoard(string userId, int[,] board, int player, bool blockTwoSides = false)
+    {
+        var row = board.GetLength(0);
+        var column = board.GetLength(1);
+        CurrentRow = row;
+        CurrentColumn = column;
+        GomokuAIs[userId] = new GomokuAI(board, player, blockTwoSides);
     }
 }
 

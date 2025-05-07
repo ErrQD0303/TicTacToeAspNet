@@ -286,12 +286,29 @@ public class GameHub : Hub<IGameHubClient>
         };
 
         CurrentMatches.Add(newMatch);
+        if (match.IsBotGame)
+        {
+            InitializeBotAI(userId, newMatch);
+        }
 
         var currentUser = await Users.GetUserByIdAsync(userId);
         await Clients.Clients([newMatch.Player1Id, newMatch.Player2Id]).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch);
 
         await Clients.Clients(newMatch.Viewers.Select(v => v.Id)).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch, true);
         Logger.LogInformation("Match restarted: {MatchId} between {Player1Id} and {Player2Id}", newMatch.Id, newMatch.Player1Id, newMatch.Player2Id);
+    }
+
+    private static void InitializeBotAI(string userId, SimpleMatch newMatch)
+    {
+        var board2D = new int[newMatch.Board.Length, newMatch.Board[0].Length];
+        for (int i = 0; i < newMatch.Board.Length; i++)
+        {
+            for (int j = 0; j < newMatch.Board[i].Length; j++)
+            {
+                board2D[i, j] = newMatch.Board[i][j] == null ? 0 : newMatch.Board[i][j] == true ? 1 : 2;
+            }
+        }
+        BotService.InitializeBoard(userId, board2D, newMatch.Player1Id == userId ? 1 : 2, newMatch.IsBlockTwoSides);
     }
 
     public async Task TriggerBotMove(string matchId)
@@ -365,7 +382,7 @@ public class GameHub : Hub<IGameHubClient>
         int botPlayer = userId == match.Player1Id ? 2 : 1;
 
         Logger.LogInformation("Bot is making a move for player {Player}", botPlayer);
-        var botMove = BotService.GetBestMove(board, botPlayer, BotType.GomokuAI);
+        var botMove = BotService.GetMove(userId, new Point(match.PreviousMove.Row, match.PreviousMove.Col), botPlayer);
         if (botMove.r != -1 && botMove.c != -1)
         {
             match.Board[botMove.r][botMove.c] = botPlayer == 1;
@@ -559,6 +576,8 @@ public class GameHub : Hub<IGameHubClient>
         };
 
         CurrentMatches.Add(match);
+
+        InitializeBotAI(Context.ConnectionId, match);
 
         await Clients.Clients(match.Player1Id).ReceiveMatchFound(botName, match);
         await Clients.Clients(match.Player2Id).ReceiveMatchFound(currentUser.Name, match);
