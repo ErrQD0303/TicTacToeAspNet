@@ -95,9 +95,9 @@ namespace TicTacToeGame.Services.Bot
             Point bestMove = new(-1, -1);
 
             var moves = GetCandidateMoves(Board, 2)
-                .Select(m => new { Move = m, Score = Heuristic(Board, m, true) })
+                .Select(m => new { Move = m, Score = Heuristic(Board, m, false) })
                 .OrderByDescending(x => x.Score)
-                .Take(15)
+                .Take(10)
                 .Select(x => x.Move)
                 .ToList();
 
@@ -123,7 +123,7 @@ namespace TicTacToeGame.Services.Bot
                 Board[move.R, move.C] = Player;
                 UpdateZobristHash(move.R, move.C, oldValue, Player);
 
-                double score = Minimax(Board, true, MaxDepth, false, move, double.MinValue, double.MaxValue);
+                int score = Minimax(Board, true, MaxDepth, false, move, int.MinValue, int.MaxValue);
 
                 Board[move.R, move.C] = oldValue;
                 UpdateZobristHash(move.R, move.C, Player, oldValue);
@@ -138,7 +138,7 @@ namespace TicTacToeGame.Services.Bot
             return bestMove;
         }
 
-        private double Minimax(int[,] board, bool isFirstLevelDepth, int depth, bool isMaximizing, Point currentMove, double alpha, double beta)
+        private int Minimax(int[,] board, bool isFirstLevelDepth, int depth, bool isMaximizing, Point currentMove, double alpha, double beta)
         {
             // Check transposition table
             if (transpositionTable.TryGetValue(zobristHash, out var entry) &&
@@ -171,7 +171,7 @@ namespace TicTacToeGame.Services.Bot
             }
 
             TranspositionFlag flag = TranspositionFlag.UpperBound;
-            double bestScore = isMaximizing ? double.MinValue : double.MaxValue;
+            int bestScore = isMaximizing ? int.MinValue : int.MaxValue;
 
             foreach (var move in candidateMoves)
             {
@@ -179,7 +179,7 @@ namespace TicTacToeGame.Services.Bot
                 board[move.R, move.C] = isMaximizing ? Player : Opponent;
                 UpdateZobristHash(move.R, move.C, oldValue, isMaximizing ? Player : Opponent);
 
-                double score = Minimax(board, false, depth - 1, !isMaximizing, move, alpha, beta);
+                int score = Minimax(board, false, depth - 1, !isMaximizing, move, alpha, beta);
 
                 board[move.R, move.C] = oldValue;
                 UpdateZobristHash(move.R, move.C, isMaximizing ? Player : Opponent, oldValue);
@@ -412,11 +412,11 @@ namespace TicTacToeGame.Services.Bot
         private List<List<int>> GetListAllDirections(int[,] board, Point move, int player)
         {
             int opponent = 3 - player;
-            List<List<int>> listAllDirections = new();
+            List<List<int>> listAllDirections = [];
 
             foreach (var (dr, dc) in Directions)
             {
-                List<int> listCell = new();
+                List<int> listCell = [];
 
                 // Check backward direction
                 for (int i = -1; i > -5; i--)
@@ -454,7 +454,7 @@ namespace TicTacToeGame.Services.Bot
             return listAllDirections;
         }
 
-        private double EvaluateBoardScoreV3(Point move, bool isPlayerTurn)
+        private int EvaluateBoardScoreV3(Point move, bool isPlayerTurn)
         {
             return isPlayerTurn ? EvaluateV3(move) : -EvaluateV3(move);
         }
@@ -554,11 +554,11 @@ namespace TicTacToeGame.Services.Bot
 
     public struct TranspositionEntry
     {
-        public double Score { get; }
+        public int Score { get; }
         public int Depth { get; }
         public TranspositionFlag Flag { get; }
 
-        public TranspositionEntry(double score, int depth, TranspositionFlag flag)
+        public TranspositionEntry(int score, int depth, TranspositionFlag flag)
         {
             Score = score;
             Depth = depth;
@@ -618,7 +618,7 @@ namespace TicTacToeGame.Services.Bot
         public const int HaveOneBlockStone2 = 1_000;
         public const int None = 0;
         public const int ConfirmWin = WinScore;
-        public const int OpponentConfirmWin = WinGuaranteBlock;
+        public const int OpponentConfirmWin = WinScore;
     }
 
     public class NumberofScorePattern
@@ -639,13 +639,13 @@ namespace TicTacToeGame.Services.Bot
         public List<List<int>> WinPattern = new() { new List<int> { 1, 1, 1, 1, 1 } };
         public List<List<int>> Stone4WithNoBlock = new() { new List<int> { 0, 1, 1, 1, 1, 0 } };
 
-        public List<List<int>> Stone3WithNoBlock = new()
-        {
-            new List<int> { 0, 1, 1, 1, 0, 0 },
-            new List<int> { 0, 0, 1, 1, 1, 0 },
-            new List<int> { 0, 1, 0, 1, 1, 0 },
-            new List<int> { 0, 1, 1, 0, 1, 0 }
-        };
+        public List<List<int>> Stone3WithNoBlock =
+        [
+            [0, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 1, 0],
+            [0, 1, 1, 0, 1, 0]
+        ];
 
         public List<List<int>> Stone2WithNoBlock =
         [
