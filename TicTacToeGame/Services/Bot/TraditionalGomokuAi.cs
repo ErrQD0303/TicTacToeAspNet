@@ -24,8 +24,6 @@ namespace TicTacToeGame.Services.Bot
         private int Player { get; set; }
         private int Opponent { get; set; }
         private bool BothSidesBlock { get; set; }
-        private const int WinScore = 10_000_000;
-        private const int LoseScore = -10_000_000;
         private const int MaxDepth = 5;
 
         private static readonly ListStonePattern ListStoneForPlayer1 = ListStonePattern.Create(true);
@@ -97,7 +95,7 @@ namespace TicTacToeGame.Services.Bot
             var moves = GetCandidateMoves(Board, 2)
                 .Select(m => new { Move = m, Score = Heuristic(Board, m, false) })
                 .OrderByDescending(x => x.Score)
-                .Take(10)
+                // .Take(10)
                 .Select(x => x.Move)
                 .ToList();
 
