@@ -286,10 +286,10 @@ public class GameHub : Hub<IGameHubClient>
         };
 
         CurrentMatches.Add(newMatch);
-        if (match.IsBotGame)
-        {
-            InitializeBotAI(userId, newMatch);
-        }
+        // if (match.IsBotGame)
+        // {
+        //     InitializeBotAI(userId, newMatch);
+        // }
 
         var currentUser = await Users.GetUserByIdAsync(userId);
         await Clients.Clients([newMatch.Player1Id, newMatch.Player2Id]).ReceiveMatchRestart(newMatch.Id, $"Player {currentUser?.Name ?? ""} restarted the match", newMatch);
@@ -298,18 +298,18 @@ public class GameHub : Hub<IGameHubClient>
         Logger.LogInformation("Match restarted: {MatchId} between {Player1Id} and {Player2Id}", newMatch.Id, newMatch.Player1Id, newMatch.Player2Id);
     }
 
-    private static void InitializeBotAI(string userId, SimpleMatch newMatch)
-    {
-        var board2D = new int[newMatch.Board.Length, newMatch.Board[0].Length];
-        for (int i = 0; i < newMatch.Board.Length; i++)
-        {
-            for (int j = 0; j < newMatch.Board[i].Length; j++)
-            {
-                board2D[i, j] = newMatch.Board[i][j] == null ? 0 : newMatch.Board[i][j] == true ? 1 : 2;
-            }
-        }
-        BotService.InitializeBoard(userId, board2D, newMatch.Player1Id == userId ? 1 : 2, newMatch.IsBlockTwoSides);
-    }
+    // private static void InitializeBotAI(string userId, SimpleMatch newMatch)
+    // {
+    //     var board2D = new int[newMatch.Board.Length, newMatch.Board[0].Length];
+    //     for (int i = 0; i < newMatch.Board.Length; i++)
+    //     {
+    //         for (int j = 0; j < newMatch.Board[i].Length; j++)
+    //         {
+    //             board2D[i, j] = newMatch.Board[i][j] == null ? 0 : newMatch.Board[i][j] == true ? 1 : 2;
+    //         }
+    //     }
+    //     BotService.InitializeBoard(userId, board2D, newMatch.Player1Id == userId ? 1 : 2, newMatch.IsBlockTwoSides);
+    // }
 
     public async Task TriggerBotMove(string matchId)
     {
@@ -382,18 +382,26 @@ public class GameHub : Hub<IGameHubClient>
         int botPlayer = userId == match.Player1Id ? 2 : 1;
 
         Logger.LogInformation("Bot is making a move for player {Player}", botPlayer);
-        var botMove = BotService.GetMove(userId, new Point(match.PreviousMove.Row, match.PreviousMove.Col), botPlayer);
-        if (botMove.r != -1 && botMove.c != -1)
+        var board2D = new int[match.Board.Length, match.Board[0].Length];
+        for (int i = 0; i < match.Board.Length; i++)
         {
-            match.Board[botMove.r][botMove.c] = botPlayer == 1;
-            Logger.LogInformation("Bot move: {Row}, {Col}", botMove.r, botMove.c);
+            for (int j = 0; j < match.Board[i].Length; j++)
+            {
+                board2D[i, j] = match.Board[i][j] == null ? 0 : match.Board[i][j] == true ? 1 : 2;
+            }
+        }
+        var botMove = BotService.GetMove(board2D, botPlayer);
+        if (botMove.R != -1 && botMove.C != -1)
+        {
+            match.Board[botMove.R][botMove.C] = botPlayer == 1;
+            Logger.LogInformation("Bot move: {Row}, {Col}", botMove.R, botMove.C);
             match.PreviousMove = new SimpleMove
             {
-                Row = botMove.r,
-                Col = botMove.c,
+                Row = botMove.R,
+                Col = botMove.C,
             };
-            await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(botMove.r.ToString(), botMove.c.ToString(), match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), false);
-            await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(botMove.r.ToString(), botMove.c.ToString(), match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
+            await Clients.Clients([match.Player1Id, match.Player2Id]).ReceiveMove(botMove.R.ToString(), botMove.C.ToString(), match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), false);
+            await Clients.Clients(match.Viewers.Select(v => v.Id)).ReceiveMove(botMove.R.ToString(), botMove.C.ToString(), match.IsPlayer1Turn ? CellState.X.ToString() : CellState.O.ToString(), true);
             match.IsPlayer1Turn = !match.IsPlayer1Turn;
         }
     }
@@ -577,7 +585,7 @@ public class GameHub : Hub<IGameHubClient>
 
         CurrentMatches.Add(match);
 
-        InitializeBotAI(Context.ConnectionId, match);
+        // InitializeBotAI(Context.ConnectionId, match);
 
         await Clients.Clients(match.Player1Id).ReceiveMatchFound(botName, match);
         await Clients.Clients(match.Player2Id).ReceiveMatchFound(currentUser.Name, match);

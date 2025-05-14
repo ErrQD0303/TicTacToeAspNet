@@ -39,9 +39,9 @@ public class GomokuBot
         // Parallel move evaluation
         Parallel.ForEach(moves, (move, state) =>
         {
-            board[move.r, move.c] = player;
+            board[move.R, move.C] = player;
             int score = Minimax(board, depth - 1, false, player, int.MinValue, int.MaxValue, blockTwoSides);
-            board[move.r, move.c] = 0;
+            board[move.R, move.C] = 0;
 
             lock (moves)
             {
@@ -104,7 +104,7 @@ public class GomokuBot
         var moveQueue = new PriorityQueue<Point, int>();
         foreach (var move in moves)
         {
-            int priority = EvaluateMove(board, move.r, move.c, maximizing ? player : opponent);
+            int priority = EvaluateMove(board, move.R, move.C, maximizing ? player : opponent);
             moveQueue.Enqueue(move, maximizing ? -priority : priority); // Higher priority first
         }
 
@@ -114,9 +114,9 @@ public class GomokuBot
             int maxEval = int.MinValue;
             while (moveQueue.TryDequeue(out var move, out _))
             {
-                board[move.r, move.c] = player;
+                board[move.R, move.C] = player;
                 int score = Minimax(board, depth - 1, false, player, alpha, beta, blockTwoSides);
-                board[move.r, move.c] = 0;
+                board[move.R, move.C] = 0;
                 maxEval = Math.Max(maxEval, score);
                 alpha = Math.Max(alpha, score);
                 if (beta <= alpha) break;
@@ -128,9 +128,9 @@ public class GomokuBot
             int minEval = int.MaxValue;
             while (moveQueue.TryDequeue(out var move, out _))
             {
-                board[move.r, move.c] = opponent;
+                board[move.R, move.C] = opponent;
                 int score = Minimax(board, depth - 1, true, player, alpha, beta, blockTwoSides);
-                board[move.r, move.c] = 0;
+                board[move.R, move.C] = 0;
                 minEval = Math.Min(minEval, score);
                 beta = Math.Min(beta, score);
                 if (beta <= alpha) break;
@@ -322,7 +322,7 @@ public class GomokuBot
 
                         if (IsValidEmptyMove(board, rr, cc))
                         {
-                            if (candidates.FirstOrDefault(p => p.r == rr && p.c == cc) is not null)
+                            if (candidates.FirstOrDefault(p => p.R == rr && p.C == cc) is not null)
                             {
                                 continue; // Skip if already in candidates
                             }

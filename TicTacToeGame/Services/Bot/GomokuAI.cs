@@ -2,39 +2,43 @@ using System.Collections.Concurrent;
 
 namespace TicTacToeGame.Services.Bot;
 
+using System.Collections.Concurrent;
+using System.Collections;
+
 public class Zobrist
 {
-    public static readonly Dictionary<int, ulong[,,]> CachedTables = [];
-    private static readonly Random Rand = new();
     private ulong[,,] _table;
 
-    public ulong[,,] Table
-    {
-        get
-        {
-            if (_table == null)
-                throw new InvalidOperationException("Zobrist table not initialized");
-            return _table;
-        }
-        private set => _table = value;
-    }
+    public ulong[,,] Table => _table ?? throw new InvalidOperationException("Zobrist table not initialized");
 
-    public void Init(int rows, int cols)
-    {
-        // var cachedTable = CachedTables.GetValueOrDefault(rows);
-        // if (cachedTable != null)
-        // {
-        //     Table = (ulong[,,])cachedTable.Clone();
-        //     return;
-        // }
+    private static readonly Random Rand = new();
 
-        Table = new ulong[rows, cols, 3];
-        // CachedTables[rows] = (ulong[,,])Table.Clone();
+    private Zobrist() { }
+
+    public static Zobrist Create(int rows, int cols)
+    {
+        var zobrist = new Zobrist { _table = new ulong[rows, cols, 3] };
+        var usedHashes = new HashSet<ulong>();
 
         for (int r = 0; r < rows; r++)
+        {
             for (int c = 0; c < cols; c++)
+            {
                 for (int p = 0; p < 3; p++)
-                    Table[r, c, p] = ((ulong)(uint)Rand.Next() << 32) | (uint)Rand.Next();
+                {
+                    ulong num;
+                    do
+                    {
+                        num = ((ulong)(uint)Rand.Next() << 32) | (uint)Rand.Next();
+                    } while (usedHashes.Contains(num));
+
+                    zobrist._table[r, c, p] = num;
+                    usedHashes.Add(num);
+                }
+            }
+        }
+
+        return zobrist;
     }
 
     public ulong ComputeHash(int[,] board)
@@ -43,197 +47,256 @@ public class Zobrist
         int rows = board.GetLength(0), cols = board.GetLength(1);
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < cols; c++)
-            {
-                int v = board[r, c];
-                if (v != 0)
-                    hash ^= Table[r, c, v];
-            }
+                if (board[r, c] != 0)
+                    hash ^= Table[r, c, board[r, c]];
         return hash;
     }
 
     public ulong UpdateHash(ulong hash, int row, int col, int player)
-    {
-        return hash ^ Table[row, col, player];
-    }
+        => hash ^ Table[row, col, player];
 }
 
 public class TranspositionTable
 {
-    private readonly ConcurrentDictionary<ulong, int> table = new();
+    private static ConcurrentDictionary<(ulong hash, int depth), int> _table = new();
 
-    public void Store(ulong hash, int value) => table[hash] = value;
-    public bool TryGet(ulong hash, out int value) => table.TryGetValue(hash, out value);
-    public void Clear() => table.Clear();
+    public void Store(ulong hash, int depth, int value) => _table[(hash, depth)] = value;
+
+    public bool TryGet(ulong hash, int minDepth, out int value)
+    {
+        // Check exact depth first
+        if (_table.TryGetValue((hash, minDepth), out value))
+            return true;
+
+        // Search for higher depths
+        int highestDepth = -1;
+        int bestValue = 0;
+        bool found = false;
+
+        foreach (var kv in _table)
+        {
+            if (kv.Key.hash == hash && kv.Key.depth >= minDepth && kv.Key.depth > highestDepth)
+            {
+                highestDepth = kv.Key.depth;
+                bestValue = kv.Value;
+                found = true;
+            }
+        }
+
+        value = bestValue;
+        return found;
+    }
+
+    public void Clear() => _table.Clear();
 }
 
 public class GomokuAI
 {
-    private int[,] board;
-    private int player;
-    private System.Drawing.Point bestMove;
-    private readonly TranspositionTable transTable;
-    private readonly Zobrist Zobrist = new();
-    private ulong currentHash;
-    private readonly int rows, cols;
-    private readonly bool BlockTwoSides;
-    private readonly ConcurrentDictionary<(int count, bool openStart, bool openEnd), int> _patternCache = new();
+    private const int MAX_SIZE = 25;
+    private readonly int[,] _board;
+    private readonly int _player;
+    private Point _bestMove;
+    private static readonly Zobrist Zobrist = Zobrist.Create(MAX_SIZE, MAX_SIZE);
+    private readonly ulong _currentHash;
+    private readonly int _rows, _cols;
+    private readonly bool _blockTwoSides;
+    private readonly int _maxDepth;
+    private readonly TranspositionTable _transpositionTable = new();
 
     private static readonly (int dr, int dc)[] Directions = {
-        (0, 1), (1, 0), (1, 1), (1, -1)
-    };
+            (0, 1), (1, 0), (1, 1), (1, -1)
+        };
 
-    public GomokuAI(int[,] board, int player, bool BlockTwoSides = false)
+    public GomokuAI(int[,] board, int player, bool blockTwoSides = false, int depth = 5)
     {
-        this.board = (int[,])board.Clone();  // Create a copy of the board
-        this.player = player;
-        this.rows = board.GetLength(0);
-        this.cols = board.GetLength(1);
-        this.BlockTwoSides = BlockTwoSides;
-
-        // Initialize Zobrist table only if needed
-        Zobrist.Init(rows, cols);
-
-        this.transTable = new TranspositionTable();
-        this.currentHash = Zobrist.ComputeHash(this.board);
+        _board = (int[,])board.Clone();
+        _player = player;
+        _rows = board.GetLength(0);
+        _cols = board.GetLength(1);
+        _blockTwoSides = blockTwoSides;
+        _maxDepth = depth;
+        _currentHash = Zobrist.ComputeHash(_board);
     }
 
-    public void UpdateBoard(Point move, int playerWhoMoved)
+    private int CalculateDynamicDepth(int moveNumber)
     {
-        int row = move.r,
-            col = move.c;
-        // Update the board
-        board[row, col] = playerWhoMoved;
-
-        // Update the hash incrementally
-        currentHash = Zobrist.UpdateHash(currentHash, row, col, playerWhoMoved);
-
-        // Update the current player (assuming it alternates)
-        player = 3 - player;
+        if (moveNumber < 4) return 2;
+        if (moveNumber < 8) return 3;
+        if (moveNumber < 12) return 4;
+        return _maxDepth;
     }
 
     public Point GetMove()
     {
-        var immediate = GetImmediateMove(board, player);
-        if (immediate != null)
-            return new Point(immediate.Value.Y, immediate.Value.X);
+        int depth = CalculateDynamicDepth(CountNonEmptyCell());
+        // Check for immediate wins/blocks
+        var immediateMove = GetImmediateMove(out var candidateMoves);
+        if (immediateMove != null)
+            return immediateMove;
 
-        bestMove = new System.Drawing.Point(-1, -1);
-        int maxScore = int.MinValue;
+        _bestMove = new Point(-1, -1);
+        int bestScore = int.MinValue;
 
-        var moves = GenerateCandidateMoves(board)
-            .Where(p => board[p.Y, p.X] == 0)
-            .OrderByDescending(p => MoveHeuristic(board, p.Y, p.X, player))
+        // Generate and order moves
+        var moves = candidateMoves.ToList()
+            .OrderByDescending(p => MoveHeuristic(p.R, p.C))
             .ToList();
 
-        object lockObj = new object();
-
-        Parallel.ForEach(moves, move =>
-        {
-            int[,] clone = (int[,])board.Clone();
-            ulong hash = currentHash;
-            clone[move.Y, move.X] = player;
-            ulong newHash = Zobrist.UpdateHash(hash, move.Y, move.X, player);
-            int score = Minimax(clone, 3, false, 3 - player, int.MinValue, int.MaxValue, newHash);
-
-            lock (lockObj)
-            {
-                if (score > maxScore)
-                {
-                    maxScore = score;
-                    bestMove = move;
-                }
-            }
-        });
-
-        return new Point(bestMove.Y, bestMove.X);
-    }
-
-    private System.Drawing.Point? GetImmediateMove(int[,] b, int currentPlayer)
-    {
-        var moves = GenerateCandidateMoves(b);
         foreach (var move in moves)
         {
-            if (b[move.Y, move.X] != 0) continue;
-            b[move.Y, move.X] = currentPlayer;
-            if (CheckWin(b, move.Y, move.X, currentPlayer))
+            _board[move.R, move.C] = _player;
+            ulong newHash = Zobrist.UpdateHash(_currentHash, move.R, move.C, _player);
+            int score = Math.Abs(Minimax(depth, false, int.MinValue, int.MaxValue, newHash, move));
+            _board[move.R, move.C] = 0; // Undo move
+            System.Console.WriteLine($"Move: {move.R},{move.C}: {score}");
+
+            if (score > bestScore)
             {
-                b[move.Y, move.X] = 0;
-                return move;
+                bestScore = score;
+                _bestMove = move;
             }
-            b[move.Y, move.X] = 0;
         }
 
-        int opponent = 3 - currentPlayer;
+        return _bestMove;
+    }
+
+    private int Minimax(int depth, bool maximizingPlayer, int alpha, int beta, ulong hash, Point cell)
+    {
+        // // Check transposition table
+        // if (_transpositionTable.TryGet(hash, depth, out int cached))
+        //     return cached;
+
+        // Terminal conditions
+        if (depth == 0)
+            return EvaluateBoard();
+
+        // Generate and order moves
+        var moves = GenerateCellCandidateMoves(cell).ToList()
+            .OrderByDescending(p => MoveHeuristic(p.R, p.C))
+            .ToList();
+
+        if (moves.Count == 0)
+            return EvaluateBoard();
+
+        int bestValue = maximizingPlayer ? int.MinValue : int.MaxValue;
+
         foreach (var move in moves)
         {
-            if (b[move.Y, move.X] != 0) continue;
-            b[move.Y, move.X] = opponent;
-            if (CheckWin(b, move.Y, move.X, opponent))
+            int player = maximizingPlayer ? _player : 3 - _player;
+            _board[move.R, move.C] = player;
+            ulong newHash = Zobrist.UpdateHash(hash, move.R, move.C, player);
+
+            int value = Minimax(depth - 1, !maximizingPlayer, alpha, beta, newHash, move);
+
+            _board[move.R, move.C] = 0; // Undo move
+
+            if (maximizingPlayer)
             {
-                b[move.Y, move.X] = 0;
+                bestValue = Math.Max(bestValue, value);
+                alpha = Math.Max(alpha, value);
+                if (alpha >= beta)
+                    break;
+            }
+            else
+            {
+                bestValue = Math.Min(bestValue, value);
+                beta = Math.Min(beta, value);
+                if (beta <= alpha)
+                    break;
+            }
+        }
+
+        _transpositionTable.Store(hash, depth, bestValue);
+        return bestValue;
+    }
+
+    private int CountNonEmptyCell()
+    {
+        int count = 0;
+        for (int r = 0; r < _rows; r++)
+        {
+            for (int c = 0; c < _cols; c++)
+            {
+                if (_board[r, c] != 0)
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    private Point? GetImmediateMove(out HashSet<Point> candidateMoves)
+    {
+        candidateMoves = GenerateCandidateMoves();
+        foreach (var move in candidateMoves)
+        {
+            // Check if we can win immediately
+            _board[move.R, move.C] = _player;
+            if (CheckWin(move.R, move.C, _player))
+            {
+                _board[move.R, move.C] = 0;
                 return move;
             }
-            b[move.Y, move.X] = 0;
+            _board[move.R, move.C] = 0;
+
+            // Check if opponent can win next move
+            _board[move.R, move.C] = 3 - _player;
+            if (CheckWin(move.R, move.C, 3 - _player))
+            {
+                _board[move.R, move.C] = 0;
+                return move;
+            }
+            _board[move.R, move.C] = 0;
         }
 
         return null;
     }
 
-    private bool CheckWin(int[,] board, int row, int col, int player)
+    private bool CheckWin(int row, int col, int player)
     {
         foreach (var (dr, dc) in Directions)
         {
-            int count = 1; // Count the placed stone
+            int count = 1;
 
-            // Count consecutive stones in positive direction
-            int positiveEndR = row, positiveEndC = col;
+            // Check positive direction
             for (int i = 1; i <= 4; i++)
             {
                 int r = row + dr * i;
                 int c = col + dc * i;
-
-                if (r < 0 || r >= rows || c < 0 || c >= cols || board[r, c] != player)
+                if (r < 0 || r >= _rows || c < 0 || c >= _cols || _board[r, c] != player)
                     break;
-
                 count++;
-                positiveEndR = r;
-                positiveEndC = c;
             }
 
-            // Count consecutive stones in negative direction
-            int negativeEndR = row, negativeEndC = col;
+            // Check negative direction
             for (int i = 1; i <= 4; i++)
             {
                 int r = row - dr * i;
                 int c = col - dc * i;
-
-                if (r < 0 || r >= rows || c < 0 || c >= cols || board[r, c] != player)
+                if (r < 0 || r >= _rows || c < 0 || c >= _cols || _board[r, c] != player)
                     break;
-
                 count++;
-                negativeEndR = r;
-                negativeEndC = c;
             }
 
-            // Must have exactly 5 in a row AND at least one open end
-            if (count == 5)
+            if (count >= 5)
             {
-                if (!BlockTwoSides)
-                {
-                    return true;
-                }
+                if (!_blockTwoSides) return true;
 
-                // Check if positive end is open
-                int nextR = positiveEndR + dr;
-                int nextC = positiveEndC + dc;
-                bool positiveOpen = (nextR >= 0 && nextR < rows && nextC >= 0 && nextC < cols && board[nextR, nextC] == 0);
+                // Check open ends for blocked version
+                int endR = row + dr * (count - 1);
+                int endC = col + dc * (count - 1);
+                bool positiveOpen = endR + dr >= 0 && endR + dr < _rows &&
+                                  endC + dc >= 0 && endC + dc < _cols &&
+                                  _board[endR + dr, endC + dc] == 0;
 
-                // Check if negative end is open
-                int prevR = negativeEndR - dr;
-                int prevC = negativeEndC - dc;
-                bool negativeOpen = (prevR >= 0 && prevR < rows && prevC >= 0 && prevC < cols && board[prevR, prevC] == 0);
+                int startR = row - dr * (count - 1);
+                int startC = col - dc * (count - 1);
+                bool negativeOpen = startR - dr >= 0 && startR - dr < _rows &&
+                                   startC - dc >= 0 && startC - dc < _cols &&
+                                   _board[startR - dr, startC - dc] == 0;
 
-                // Win only if at least one end is open
                 if (positiveOpen || negativeOpen)
                     return true;
             }
@@ -241,137 +304,232 @@ public class GomokuAI
         return false;
     }
 
-    private int Minimax(int[,] b, int depth, bool maximizing, int currentPlayer, int alpha, int beta, ulong hash)
-    {
-        if (transTable.TryGet(hash, out int cached))
-            return cached;
-
-        var moves = GenerateCandidateMoves(b)
-            .Where(p => b[p.Y, p.X] == 0)
-            .OrderByDescending(p => MoveHeuristic(b, p.Y, p.X, currentPlayer))
-            .ToList();
-
-        if (depth == 0 || moves.Count == 0)
-            return EvaluateBoard(b, player);
-
-        int bestScore = maximizing ? int.MinValue : int.MaxValue;
-        int opponent = 3 - currentPlayer;
-
-        foreach (var move in moves)
-        {
-            b[move.Y, move.X] = currentPlayer;
-            ulong newHash = Zobrist.UpdateHash(hash, move.Y, move.X, currentPlayer);
-            int score = Minimax(b, depth - 1, !maximizing, player, alpha, beta, newHash);
-            b[move.Y, move.X] = 0;
-
-            if (maximizing)
-            {
-                bestScore = Math.Max(bestScore, score);
-                alpha = Math.Max(alpha, score);
-            }
-            else
-            {
-                bestScore = Math.Min(bestScore, score);
-                beta = Math.Min(beta, score);
-            }
-
-            if (beta <= alpha) break;
-        }
-
-        if (depth >= 2) transTable.Store(hash, bestScore);
-        return bestScore;
-    }
-
-    private int MoveHeuristic(int[,] b, int r, int c, int player)
+    private int MoveHeuristic(int r, int c)
     {
         int score = 0;
+        int opponent = 3 - _player;
+
+        // Base score for position (center is better)
+        score += 10 - (Math.Abs(r - _rows / 2) + Math.Abs(c - _cols / 2));
+
         foreach (var (dr, dc) in Directions)
         {
+            int playerCount = 0, opponentCount = 0;
+            int playerPotential = 0, opponentPotential = 0;
+
+            // Evaluate both directions
             for (int i = -1; i <= 1; i += 2)
             {
                 int rr = r + dr * i, cc = c + dc * i;
-                if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && b[rr, cc] == player)
-                    score++;
+                bool playerBlocked = false, opponentBlocked = false;
+
+                while (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols)
+                {
+                    if (!playerBlocked)
+                    {
+                        if (_board[rr, cc] == _player)
+                            playerCount++;
+                        else if (_board[rr, cc] == opponent)
+                            playerBlocked = true;
+                        else
+                            playerPotential++;
+                    }
+
+                    if (!opponentBlocked)
+                    {
+                        if (_board[rr, cc] == opponent)
+                            opponentCount++;
+                        else if (_board[rr, cc] == _player)
+                            opponentBlocked = true;
+                        else
+                            opponentPotential++;
+                    }
+
+                    rr += dr * i;
+                    cc += dc * i;
+                }
             }
+
+            // Score based on actual pieces and potential
+            score += (int)Math.Pow(playerCount, 3) + playerPotential;
+            score -= (int)Math.Pow(opponentCount, 3) + opponentPotential;
         }
+
         return score;
     }
 
-    private int EvaluateBoard(int[,] b, int me)
+    private int EvaluateBoard()
     {
         int score = 0;
-        int opp = 3 - me;
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
+        var evaluated = new BitArray(_rows * _cols * Directions.Length);
+
+        for (int r = 0; r < _rows; r++)
+        {
+            for (int c = 0; c < _cols; c++)
             {
-                if (b[r, c] == 0) continue;
-                bool isPlayer = b[r, c] == me;
-                foreach (var (dr, dc) in Directions)
-                    score += ScoreLine(b, r, c, dr, dc, isPlayer);
+                if (_board[r, c] == 0) continue;
+
+                for (int dir = 0; dir < Directions.Length; dir++)
+                {
+                    int index = (r * _cols + c) * Directions.Length + dir;
+                    if (evaluated[index]) continue;
+
+                    var (dr, dc) = Directions[dir];
+                    int rr = r, cc = c;
+
+                    while (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols && _board[rr, cc] == _board[r, c])
+                    {
+                        int currIndex = (rr * _cols + cc) * Directions.Length + dir;
+                        evaluated[currIndex] = true;
+                        rr += dr;
+                        cc += dc;
+                    }
+
+                    score += EvaluateLine(r, c, dr, dc, _board[r, c] == _player);
+                }
             }
+        }
+
         return score;
     }
 
-    private int ScoreLine(int[,] b, int r, int c, int dr, int dc, bool isPlayer)
+    private int EvaluateLine(int r, int c, int dr, int dc, bool isPlayer)
     {
-        int me = isPlayer ? player : 3 - player;
-        int count = 0, rr = r, cc = c;
-        while (rr >= 0 && rr < rows && cc >= 0 && cc < cols && b[rr, cc] == me)
+        int cellOwner = isPlayer ? _player : 3 - _player;
+        int count = 1;
+        int openEnds = 0;
+        bool blockedPositive = false, blockedNegative = false;
+
+        // Check positive direction
+        int rr = r + dr, cc = c + dc;
+        while (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols &&
+              (_board[rr, cc] == cellOwner || (!blockedPositive && _board[rr, cc] == 0)))
         {
-            count++;
-            rr += dr; cc += dc;
+            if (_board[rr, cc] == 0)
+            {
+                openEnds++;
+                blockedPositive = true;
+            }
+            else
+            {
+                count++;
+            }
+            rr += dr;
+            cc += dc;
         }
 
-        bool openStart = false, openEnd = false;
-
-        int sr = r - dr, sc = c - dc;
-        if (sr >= 0 && sr < rows && sc >= 0 && sc < cols && b[sr, sc] == 0) openStart = true;
-        if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && b[rr, cc] == 0) openEnd = true;
-
-        // Create pattern key
-        var patternKey = (count, openStart, openEnd);
-
-        // Try to get from cache
-        if (_patternCache.TryGetValue(patternKey, out int cachedScore))
+        // Check negative direction
+        rr = r - dr;
+        cc = c - dc;
+        while (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols &&
+              (_board[rr, cc] == cellOwner || (!blockedNegative && _board[rr, cc] == 0)))
         {
-            return isPlayer ? cachedScore : -cachedScore;
+            if (_board[rr, cc] == 0)
+            {
+                openEnds++;
+                blockedNegative = true;
+            }
+            else
+            {
+                count++;
+            }
+            rr -= dr;
+            cc -= dc;
         }
 
-        int lineScore;
-        if (count >= 5) lineScore = 1_100_000;
-        else if (count == 4 && openStart && openEnd) lineScore = 1_000_000;
-        else if (count == 4 && (openStart || openEnd)) lineScore = 700_000;
-        else if (count == 3 && openStart && openEnd) lineScore = 500_000;
-        else if (count == 3 && (openStart || openEnd)) lineScore = 10_000;
-        else if (count == 2 && openStart && openEnd) lineScore = 100;
-        else if (count == 2 && (openStart || openEnd)) lineScore = 10;
-        else lineScore = 1;
+        // Improved scoring with better differentiation
+        int lineScore = 0;
 
-        _patternCache[patternKey] = lineScore;
+        if (count >= 5)
+        {
+            lineScore = 1_000_000; // Immediate win
+        }
+        else if (count == 4)
+        {
+            if (openEnds >= 1) lineScore = 700_000; // 4 with at least one open end
+            else lineScore = 1_000; // Blocked four
+        }
+        else if (count == 3)
+        {
+            if (openEnds >= 2) lineScore = 500_000; // Open three
+            else if (openEnds == 1) lineScore = 10_000; // Semi-open three
+            else lineScore = 100; // Blocked three
+        }
+        else if (count == 2)
+        {
+            if (openEnds >= 2) lineScore = 2_000; // Open two
+            else if (openEnds == 1) lineScore = 200; // Semi-open two
+            else lineScore = 10; // Blocked two
+        }
+        else if (count == 1 && openEnds >= 1)
+        {
+            lineScore = 5; // Potential starting point
+        }
+
+        // Add small bonus for lines that can potentially grow longer
+        if (count >= 2 && openEnds >= 1)
+        {
+            lineScore += lineScore / 2;
+        }
 
         return isPlayer ? lineScore : -lineScore;
     }
 
-    private HashSet<System.Drawing.Point> GenerateCandidateMoves(int[,] b)
+    private HashSet<Point> GenerateCellCandidateMoves(Point cell)
     {
-        var moves = new HashSet<System.Drawing.Point>();
-        int margin = 2;
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
-                if (b[r, c] != 0)
-                    for (int dr = -margin; dr <= margin; dr++)
-                        for (int dc = -margin; dc <= margin; dc++)
-                        {
-                            int rr = r + dr, cc = c + dc;
-                            if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && b[rr, cc] == 0)
-                            {
-                                if (moves.Any(m => m.X == cc && m.Y == rr)) continue;
-                                moves.Add(new System.Drawing.Point(cc, rr));
-                            }
-                        }
+        var moves = new HashSet<Point>();
+        int margin = 1;
 
-        if (moves.Count == 0 && b[rows / 2, cols / 2] == 0)
-            moves.Add(new System.Drawing.Point(cols / 2, rows / 2));
+        foreach (var (dr, dc) in Directions)
+        {
+            for (int i = -margin; i <= margin; i++)
+            {
+                int rr = cell.R + dr * i,
+                    cc = cell.C + dc * i;
+
+                if (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols && _board[rr, cc] == 0)
+                {
+                    moves.Add(new(rr, cc));
+                }
+            }
+        }
+
+        return moves;
+    }
+
+    private HashSet<Point> GenerateCandidateMoves()
+    {
+        var moves = new HashSet<Point>();
+
+        // Find empty spots near occupied positions
+        for (int r = 0; r < _rows; r++)
+        {
+            for (int c = 0; c < _cols; c++)
+            {
+                if (_board[r, c] != 0)
+                {
+                    foreach (var (dr, dc) in Directions)
+                    {
+                        for (int i = -2; i <= 2; i++)
+                        {
+                            if (i == 0)
+                            {
+                                continue;
+                            }
+                            int rr = r + dr * i;
+                            int cc = c + dc * i;
+                            if (rr >= 0 && rr < _rows && cc >= 0 && cc < _cols && _board[rr, cc] == 0 && moves.All(p => p.R != rr || p.C != cc))
+                                moves.Add(new Point(rr, cc));
+                        }
+                    }
+                }
+            }
+        }
+
+
+        // Default center move if no candidates
+        if (moves.Count == 0 && _board[_rows / 2, _cols / 2] == 0)
+            moves.Add(new Point(_rows / 2, _cols / 2));
 
         return moves;
     }

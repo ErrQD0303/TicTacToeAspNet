@@ -12,32 +12,9 @@ public class BotService : IBotService
     {
     }
 
-    public Point GetMove(string userId, Point opponentMove, int player)
+    public Point GetMove(int[,] board, int player, bool blockBothSides = false)
     {
-        var gomokuAi = GomokuAIs[userId];
-        if (gomokuAi == null)
-        {
-            throw new InvalidOperationException("GomokuAI is not initialized. Call InitializeBoard first.");
-        }
-
-        if (opponentMove.r >= 0 && opponentMove.r < CurrentRow && opponentMove.c >= 0 && opponentMove.c < CurrentColumn)
-        {
-            // Valid move
-            gomokuAi.UpdateBoard(opponentMove, 3 - player);
-        }
-
-        var playerMove = gomokuAi.GetMove() ?? throw new InvalidOperationException("No valid move found.");
-        gomokuAi.UpdateBoard(playerMove, player);
-        return playerMove;
-    }
-
-    public void InitializeBoard(string userId, int[,] board, int player, bool blockTwoSides = false)
-    {
-        var row = board.GetLength(0);
-        var column = board.GetLength(1);
-        CurrentRow = row;
-        CurrentColumn = column;
-        GomokuAIs[userId] = new GomokuAI(board, player, blockTwoSides);
+        return new TraditionalGomokuAI(board, player, blockBothSides).GetMove();
     }
 }
 
