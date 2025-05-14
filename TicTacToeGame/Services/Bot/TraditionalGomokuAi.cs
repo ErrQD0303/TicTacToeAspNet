@@ -26,7 +26,7 @@ namespace TicTacToeGame.Services.Bot
         private bool BothSidesBlock { get; set; }
         private const int WinScore = 10_000_000;
         private const int LoseScore = -10_000_000;
-        private const int MaxDepth = 3;
+        private const int MaxDepth = 5;
 
         private static readonly ListStonePattern ListStoneForPlayer1 = ListStonePattern.Create(true);
         private static readonly ListStonePattern ListStoneForPlayer2 = ListStonePattern.Create(false);
@@ -97,12 +97,25 @@ namespace TicTacToeGame.Services.Bot
             var moves = GetCandidateMoves(Board, 2)
                 .Select(m => new { Move = m, Score = Heuristic(Board, m, true) })
                 .OrderByDescending(x => x.Score)
-                // .Take(10)
+                .Take(15)
                 .Select(x => x.Move)
                 .ToList();
 
             if (moves.Count == 0) return bestMove;
             if (moves.Count == 1) return moves[0];
+
+            // Check for winning move
+            var winningMove = GetPlayerWinningMoveV3();
+            if (winningMove != null)
+            {
+                return winningMove;
+            }
+            // Check for opponent's winning move
+            var opponentWinningMove = GetOpponentWinningMoveV3();
+            if (opponentWinningMove != null)
+            {
+                return opponentWinningMove;
+            }
 
             foreach (var move in moves)
             {
@@ -148,7 +161,7 @@ namespace TicTacToeGame.Services.Bot
             var candidateMoves = GetCandidateMoves(board, radius)
                 .Select(m => new { Move = m, Score = Heuristic(board, m, isMaximizing) })
                 .OrderByDescending(x => x.Score)
-                // .Take(10)
+                .Take(10)
                 .Select(x => x.Move)
                 .ToList();
 
@@ -605,7 +618,7 @@ namespace TicTacToeGame.Services.Bot
         public const int HaveOneBlockStone2 = 1_000;
         public const int None = 0;
         public const int ConfirmWin = WinScore;
-        public const int OpponentConfirmWin = HaveOnlyOneStone3;
+        public const int OpponentConfirmWin = WinGuaranteBlock;
     }
 
     public class NumberofScorePattern
@@ -634,15 +647,15 @@ namespace TicTacToeGame.Services.Bot
             new List<int> { 0, 1, 1, 0, 1, 0 }
         };
 
-        public List<List<int>> Stone2WithNoBlock = new()
-        {
-            new List<int> { 0, 0, 1, 1, 0, 0 },
-            new List<int> { 0, 1, 0, 1, 0, 0 },
-            new List<int> { 0, 0, 1, 0, 1, 0 },
-            new List<int> { 0, 1, 1, 0, 0, 0 },
-            new List<int> { 0, 0, 0, 1, 1, 0 },
-            new List<int> { 0, 1, 0, 0, 1, 0 }
-        };
+        public List<List<int>> Stone2WithNoBlock =
+        [
+            [0, 0, 1, 1, 0, 0],
+            [0, 1, 0, 1, 0, 0],
+            [0, 0, 1, 0, 1, 0],
+            [0, 1, 1, 0, 0, 0],
+            [0, 0, 0, 1, 1, 0],
+            [0, 1, 0, 0, 1, 0]
+        ];
 
         public List<List<int>> Stone4WithBlock = new()
         {
@@ -691,6 +704,10 @@ namespace TicTacToeGame.Services.Bot
             {
                 for (int j = 0; j < listInput[i].Count; j++)
                 {
+                    if (listInput[i][j] == 0)
+                    {
+                        continue;
+                    }
                     listInput[i][j] = 3 - listInput[i][j];
                 }
             }
