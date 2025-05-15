@@ -637,10 +637,16 @@ namespace TicTacToeGame.Services.Bot
         public List<List<int>> WinPattern = new() { new List<int> { 1, 1, 1, 1, 1 } };
         public List<List<int>> Stone4WithNoBlock = new() { new List<int> { 0, 1, 1, 1, 1, 0 } };
 
+        // public List<List<int>> Stone3WithNoBlock =
+        // [
+        //     [0, 1, 1, 1, 0, 0],
+        //     [0, 0, 1, 1, 1, 0],
+        //     [0, 1, 0, 1, 1, 0],
+        //     [0, 1, 1, 0, 1, 0]
+        // ];
         public List<List<int>> Stone3WithNoBlock =
         [
-            [0, 1, 1, 1, 0, 0],
-            [0, 0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0],
             [0, 1, 0, 1, 1, 0],
             [0, 1, 1, 0, 1, 0]
         ];
