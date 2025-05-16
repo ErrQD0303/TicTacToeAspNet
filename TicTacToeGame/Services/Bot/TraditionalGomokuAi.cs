@@ -118,15 +118,15 @@ public class TraditionalGomokuAI
 
         // Check for winning move
         var winningMove = GetPlayerWinningMoveV3();
-        if (winningMove != null)
-        {
-            return winningMove;
-        }
         // Check for opponent's winning move
         var opponentWinningMove = GetOpponentWinningMoveV3();
         if (opponentWinningMove != null)
         {
             return opponentWinningMove;
+        }
+        if (winningMove != null)
+        {
+            return winningMove;
         }
 
         foreach (var move in moves)
@@ -618,7 +618,7 @@ public class GomokuV3Score
     public const int WinScore = 1_000_000_000;
     public const int WinGuarantee = WinScore / 10;
     public const int WinGuaranteBlock = WinGuarantee / 10;
-    public const int HaveAtLeastTwoStone3WithNoBlockWhichInterSectAtOnePoint = WinGuarantee / 20 + WinGuarantee / 15;
+    public const int HaveAtLeastTwoStone3WithNoBlockWhichInterSectAtOnePoint = WinGuarantee / 20;
     public const int HaveAtLeastOneStone3AndOneStone4 = WinGuarantee / 100;
     public const int HaveMoreThanOneStone3 = WinGuarantee / 1000;
     public const int HaveOneStone3And3Stone2 = 40_000;
@@ -640,8 +640,8 @@ public class GomokuV3Score
     public const int HaveTwoBlockStone2 = 2_000;
     public const int HaveOneBlockStone2 = 1_000;
     public const int None = 0;
-    public const int ConfirmWin = WinScore;
-    public const int OpponentConfirmWin = WinScore;
+    public const int ConfirmWin = WinGuarantee / 20;
+    public const int OpponentConfirmWin = WinGuarantee / 20;
 }
 
 public class NumberofScorePattern
