@@ -640,8 +640,8 @@ public class GomokuV3Score
     public const int HaveTwoBlockStone2 = 2_000;
     public const int HaveOneBlockStone2 = 1_000;
     public const int None = 0;
-    public const int ConfirmWin = WinGuarantee / 20 + WinGuarantee / 15;
-    public const int OpponentConfirmWin = WinGuarantee / 20 + WinGuarantee / 15;
+    public const int ConfirmWin = WinScore;
+    public const int OpponentConfirmWin = WinScore;
 }
 
 public class NumberofScorePattern
