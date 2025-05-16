@@ -362,32 +362,33 @@ public class TraditionalGomokuAI
     {
         var scorePattern = new NumberofScorePattern();
         ListStonePattern listPattern = isPlay1Move ? ListStoneForPlayer1 : ListStoneForPlayer2;
+        int uniqueOpenThreeCnt = 0;
 
         foreach (var list in listOfDirections)
         {
             if (IsAnyInArrays(listPattern.WinPattern, list))
             {
                 scorePattern.Winning++;
-                continue;
             }
             if (IsAnyInArrays(listPattern.Stone4WithNoBlock, list))
             {
                 scorePattern.Stone4++;
-                continue;
             }
             if (IsAnyInArrays(listPattern.Stone3WithNoBlock, list))
             {
                 scorePattern.Stone3++;
+                if (scorePattern.Stone3 == 1)
+                {
+                    uniqueOpenThreeCnt++;
+                }
             }
             if (IsAnyInArrays(listPattern.Stone4WithBlock, list))
             {
                 scorePattern.BlockStone4++;
-                continue;
             }
             if (IsAnyInArrays(listPattern.Stone3WithBlock, list))
             {
                 scorePattern.BlockStone3++;
-                continue;
             }
             if (IsAnyInArrays(listPattern.Stone2WithNoBlock, list))
             {
@@ -395,9 +396,9 @@ public class TraditionalGomokuAI
             }
         }
 
-        if (scorePattern.Stone3 >= 2)
+        if (uniqueOpenThreeCnt > 1)
         {
-            scorePattern.DoubleStone3WithNoBlock = scorePattern.Stone3 / 2;
+            scorePattern.DoubleStone3WithNoBlock = uniqueOpenThreeCnt;
         }
 
         return scorePattern;
