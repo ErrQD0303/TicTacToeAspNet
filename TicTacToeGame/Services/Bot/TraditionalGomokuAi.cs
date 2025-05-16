@@ -378,10 +378,6 @@ public class TraditionalGomokuAI
             if (IsAnyInArrays(listPattern.Stone3WithNoBlock, list))
             {
                 scorePattern.Stone3++;
-                if (scorePattern.Stone3 >= 2)
-                {
-                    scorePattern.DoubleStone3WithNoBlock++;
-                }
             }
             if (IsAnyInArrays(listPattern.Stone4WithBlock, list))
             {
@@ -397,6 +393,11 @@ public class TraditionalGomokuAI
             {
                 scorePattern.Stone2++;
             }
+        }
+
+        if (scorePattern.Stone3 >= 2)
+        {
+            scorePattern.DoubleStone3WithNoBlock = scorePattern.Stone3 / 2;
         }
 
         return scorePattern;
