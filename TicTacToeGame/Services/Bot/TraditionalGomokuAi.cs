@@ -288,6 +288,7 @@ namespace TicTacToeGame.Services.Bot
             if (scorePattern.Stone4 > 0) return GomokuV3Score.WinGuarantee;
             if (scorePattern.BlockStone4 > 1) return GomokuV3Score.WinGuaranteBlock;
             if (scorePattern.Stone3 > 0 && scorePattern.Stone4 > 0) return GomokuV3Score.HaveAtLeastOneStone3AndOneStone4;
+            if (scorePattern.DoubleStone3WithNoBlock > 0) return GomokuV3Score.HaveAtLeastTwoStone3WithNoBlockWhichInterSectAtOnePoint;
             if (scorePattern.Stone3 > 1) return GomokuV3Score.HaveMoreThanOneStone3;
 
             if (scorePattern.Stone3 == 1)
@@ -363,7 +364,10 @@ namespace TicTacToeGame.Services.Bot
                 if (IsAnyInArrays(listPattern.Stone3WithNoBlock, list))
                 {
                     scorePattern.Stone3++;
-                    continue;
+                    if (scorePattern.Stone3 >= 2)
+                    {
+                        scorePattern.DoubleStone3WithNoBlock++;
+                    }
                 }
                 if (IsAnyInArrays(listPattern.Stone4WithBlock, list))
                 {
@@ -422,12 +426,14 @@ namespace TicTacToeGame.Services.Bot
                     int rr = move.R + dr * i;
                     int cc = move.C + dc * i;
 
-                    if (rr < 0 || rr >= Rows || cc < 0 || cc >= Cols) continue;
+                    if (rr < 0 || rr >= Rows || cc < 0 || cc >= Cols) break;
 
                     int cellValue = board[rr, cc];
-                    if (cellValue == opponent) break;
-
                     listCell.Insert(0, cellValue);
+                    if (cellValue == opponent)
+                    {
+                        break;
+                    }
                 }
 
                 listCell.Add(player);
@@ -438,12 +444,16 @@ namespace TicTacToeGame.Services.Bot
                     int rr = move.R + dr * i;
                     int cc = move.C + dc * i;
 
-                    if (rr < 0 || rr >= Rows || cc < 0 || cc >= Cols) continue;
+                    if (rr < 0 || rr >= Rows || cc < 0 || cc >= Cols) break;
 
                     int cellValue = board[rr, cc];
-                    if (cellValue == opponent) break;
 
                     listCell.Add(cellValue);
+
+                    if (cellValue == opponent)
+                    {
+                        break;
+                    }
                 }
 
                 listAllDirections.Add(listCell);
@@ -493,7 +503,7 @@ namespace TicTacToeGame.Services.Bot
                 moves.Add(new Point(rows / 2, cols / 2));
             }
 
-            return moves.ToList();
+            return [.. moves];
         }
 
         private static bool HasWon(int[,] board, int player, bool blockTwoSides = false)
@@ -594,6 +604,7 @@ namespace TicTacToeGame.Services.Bot
         public const int WinScore = 1_000_000_000;
         public const int WinGuarantee = WinScore / 10;
         public const int WinGuaranteBlock = WinGuarantee / 10;
+        public const int HaveAtLeastTwoStone3WithNoBlockWhichInterSectAtOnePoint = WinGuarantee / 20 + WinGuarantee / 15;
         public const int HaveAtLeastOneStone3AndOneStone4 = WinGuarantee / 100;
         public const int HaveMoreThanOneStone3 = WinGuarantee / 1000;
         public const int HaveOneStone3And3Stone2 = 40_000;
@@ -615,8 +626,8 @@ namespace TicTacToeGame.Services.Bot
         public const int HaveTwoBlockStone2 = 2_000;
         public const int HaveOneBlockStone2 = 1_000;
         public const int None = 0;
-        public const int ConfirmWin = WinScore;
-        public const int OpponentConfirmWin = WinScore;
+        public const int ConfirmWin = WinGuarantee / 20 + WinGuarantee / 15;
+        public const int OpponentConfirmWin = WinGuarantee / 20 + WinGuarantee / 15;
     }
 
     public class NumberofScorePattern
@@ -627,29 +638,30 @@ namespace TicTacToeGame.Services.Bot
         public int Stone2 = 0;
         public int BlockStone4 = 0;
         public int BlockStone3 = 0;
+        public int DoubleStone3WithNoBlock = 0;
 
         public bool HasZeroValue => Winning == 0 && Stone4 == 0 && Stone3 == 0 &&
-                                  Stone2 == 0 && BlockStone4 == 0 && BlockStone3 == 0;
+                                  Stone2 == 0 && BlockStone4 == 0 && BlockStone3 == 0 && DoubleStone3WithNoBlock == 0;
     }
 
     public class ListStonePattern
     {
-        public List<List<int>> WinPattern = new() { new List<int> { 1, 1, 1, 1, 1 } };
-        public List<List<int>> Stone4WithNoBlock = new() { new List<int> { 0, 1, 1, 1, 1, 0 } };
+        public List<List<int>> WinPattern = [[1, 1, 1, 1, 1]];
+        public List<List<int>> Stone4WithNoBlock = [[0, 1, 1, 1, 1, 0]];
 
-        // public List<List<int>> Stone3WithNoBlock =
-        // [
-        //     [0, 1, 1, 1, 0, 0],
-        //     [0, 0, 1, 1, 1, 0],
-        //     [0, 1, 0, 1, 1, 0],
-        //     [0, 1, 1, 0, 1, 0]
-        // ];
         public List<List<int>> Stone3WithNoBlock =
         [
-            [0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 1, 0],
             [0, 1, 0, 1, 1, 0],
             [0, 1, 1, 0, 1, 0]
         ];
+        // public List<List<int>> Stone3WithNoBlock =
+        // [
+        //     [0, 1, 1, 1, 0],
+        //     [0, 1, 0, 1, 1, 0],
+        //     [0, 1, 1, 0, 1, 0]
+        // ];
 
         public List<List<int>> Stone2WithNoBlock =
         [
@@ -661,31 +673,31 @@ namespace TicTacToeGame.Services.Bot
             [0, 1, 0, 0, 1, 0]
         ];
 
-        public List<List<int>> Stone4WithBlock = new()
-        {
-            new List<int> { 2, 1, 0, 1, 1, 1 },
-            new List<int> { 2, 1, 1, 0, 1, 1 },
-            new List<int> { 2, 1, 1, 1, 0, 1 },
-            new List<int> { 2, 1, 1, 1, 1, 0 },
-            new List<int> { 0, 1, 1, 1, 1, 2 },
-            new List<int> { 1, 0, 1, 1, 1, 2 },
-            new List<int> { 1, 1, 0, 1, 1, 2 },
-            new List<int> { 1, 1, 1, 0, 1, 2 }
-        };
+        public List<List<int>> Stone4WithBlock =
+        [
+            [2, 1, 0, 1, 1, 1],
+            [2, 1, 1, 0, 1, 1],
+            [2, 1, 1, 1, 0, 1],
+            [2, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 2],
+            [1, 0, 1, 1, 1, 2],
+            [1, 1, 0, 1, 1, 2],
+            [1, 1, 1, 0, 1, 2]
+        ];
 
-        public List<List<int>> Stone3WithBlock = new()
-        {
-            new List<int> { 2, 1, 1, 1, 0, 0 },
-            new List<int> { 2, 1, 1, 0, 1, 0 },
-            new List<int> { 2, 1, 0, 1, 1, 0 },
-            new List<int> { 0, 0, 1, 1, 1, 2 },
-            new List<int> { 0, 1, 0, 1, 1, 2 },
-            new List<int> { 0, 1, 1, 0, 1, 2 },
-            new List<int> { 2, 1, 0, 1, 0, 1, 2 },
-            new List<int> { 2, 0, 1, 1, 1, 0, 2 },
-            new List<int> { 2, 1, 1, 0, 0, 1, 2 },
-            new List<int> { 2, 1, 0, 0, 1, 1, 2 }
-        };
+        public List<List<int>> Stone3WithBlock =
+        [
+            [2, 1, 1, 1, 0, 0],
+            [2, 1, 1, 0, 1, 0],
+            [2, 1, 0, 1, 1, 0],
+            [0, 0, 1, 1, 1, 2],
+            [0, 1, 0, 1, 1, 2],
+            [0, 1, 1, 0, 1, 2],
+            [2, 1, 0, 1, 0, 1, 2],
+            [2, 0, 1, 1, 1, 0, 2],
+            [2, 1, 1, 0, 0, 1, 2],
+            [2, 1, 0, 0, 1, 1, 2]
+        ];
 
         public static ListStonePattern Create(bool isForPlayer1)
         {
