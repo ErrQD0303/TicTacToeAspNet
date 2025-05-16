@@ -498,6 +498,10 @@
           onlineUsers: [],
           playingMatches: [],
           currentViewMatch: null,
+          opponent: {
+            name: "",
+            id: "",
+          },
           score: {
             you: 0,
             opponent: 0,
@@ -836,8 +840,18 @@
               elements.btnExitGame.style.display = "block";
               elements.playingMatchList.style.display = "none";
               elements.boardSizeSelect.style.d;
-              elements.yourName.textContent = `Player 1: ${match.player1.name}`;
-              elements.opponentName.textContent = `Player 2: ${match.player2.name}`;
+              if (match.isBotGame) {
+                if (match.player2.name.startsWith("GomokuBot")) {
+                  elements.yourName.textContent = `Player 1: 🤵 ${match.player1.name}`;
+                  elements.opponentName.textContent = `Bot: 🤖 ${match.player2.name}`;
+                } else {
+                  elements.yourName.textContent = `Bot: 🤖 ${match.player1.name}`;
+                  elements.opponentName.textContent = `Player 2: 🤵 ${match.player2.name}`;
+                }
+              } else {
+                elements.yourName.textContent = `Player 1: 🤵 ${match.player1.name}`;
+                elements.opponentName.textContent = `Player 2: 🤵 ${match.player2.name}`;
+              }
               elements.boardSizeSelect.disabled = true;
               elements.userSidebar.classList.remove("open");
               elements.onlineUsersSidebar.classList.remove("open");
@@ -1522,10 +1536,18 @@
           const isPlayer1 = gameState.currentUser?.id === match.player1Id;
           gameState.isBotGame = match.isBotGame;
           if (isPlayer1) {
-            opponent = match.player2name;
+            gameState.opponent = {
+              ...(gameState.opponent || {}),
+              name: match.player2Name,
+              id: match.player2Id,
+            };
             gameState.isYourTurn = true;
           } else {
-            opponent = match.player1name;
+            gameState.opponent = {
+              ...(gameState.opponent || {}),
+              name: match.player1Name,
+              id: match.player1Id,
+            };
             gameState.isYourTurn = false;
             if (match.isBotGame) {
               await triggerBotMove();
@@ -1546,13 +1568,11 @@
           gameState.isBlockTwoSides = match.isBlockTwoSides;
           elements.blockTwoSidesCheckbox.checked = match.isBlockTwoSides;
           await resetGame();
-          gameState.opponent = gameState.onlineUsers.find(
-            ({ id }) => id === gameState.opponentId
-          );
 
-          elements.yourName.textContent = `${gameState.currentUser?.name}`;
-          if (!isBotGame) {
-            elements.opponentName.textContent = `${gameState.opponent.name}`;
+          console.log(gameState.opponent);
+          elements.yourName.textContent = `🤵 ${gameState.currentUser?.name}`;
+          if (!match.isBotGame) {
+            elements.opponentName.textContent = `🤵 ${gameState.opponent.name}`;
           } else {
             elements.opponentName.textContent = `🤖 ${gameState.opponent.name}`;
           }
