@@ -40,39 +40,90 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        max-width: 400px;
+        max-width: 600px;
         width: 90%;
         padding: 20px;
         border: 2px solid #ccc;
         border-radius: 10px;
-        background-color: #fff;
+        background-color: #ffffff;
         z-index: 10;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
       }
 
       .auth-form {
-        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
       }
 
-      .auth-form input {
+      .auth-form-button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .auth-form h3 {
+        color: #333;
+        text-transform: uppercase;
+        line-height: 1.2;
+        margin: 10px;
+        width: 100%;
+      }
+
+      input,
+      input:focus {
         width: 100%;
         padding: 8px;
         margin: 5px 0;
         box-sizing: border-box;
+        text-align: center;
+        font-weight: 600;
+        background-color: #fff;
+        color: #3b82f6;
+        border-radius: 8px;
+      }
+
+      input {
+        border: 1px solid #ccc; /* default border */
+        border-radius: 6px; /* adjust as needed */
+        outline: none; /* remove default focus ring (optional) */
+      }
+
+      input:focus {
+        border-color: #3b82f6; /* blue border when input is focused */
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); /* optional glow effect */
+      }
+
+      input:-webkit-autofill {
+        background-color: #fff !important;
+        color: #3b82f6 !important;
+        -webkit-text-fill-color: #3b82f6 !important;
+        transition: background-color 5000s ease-in-out 0s;
       }
 
       .auth-form button {
-        width: 100%;
-        padding: 8px;
-        background-color: #3b82f6;
+        display: flex;
+        align-items: center; /* vertical center */
+        justify-content: center; /* horizontal center */
+        padding: 10px 24px;
+        background-color: #2d91e3;
         color: white;
         border: none;
-        border-radius: 4px;
+        border-radius: 8px;
         cursor: pointer;
+        transition: background-color 0.3s;
+        text-align: center;
       }
 
-      .auth-form button:hover {
-        background-color: #2563eb;
+      .auth-form button:hover,
+      .auth-form button:active {
+        background-color: #1971c2;
       }
 
       #switch-to-register {
@@ -348,7 +399,11 @@
         transition: background-color 0.3s;
       }
 
-      @media (max-width: 600px) {
+      @media (max-width: 576px) {
+        #auth-container {
+          width: 90vw;
+          max-width: 400px;
+        }
         #online-users-toggle,
         #sidebar-toggle {
           padding: 14px 20px;
@@ -370,16 +425,29 @@
         #user-sidebar h3 {
           font-size: 20px;
         }
+
+        #auth-container {
+          width: 90vw;
+        }
+
+        .auth-container-img {
+          display: none;
+        }
       }
     </style>
   </head>
   <body>
     <div id="auth-container">
       <form id="login-form" class="auth-form">
-        <h3>Login</h3>
+        <h3>Welcome to Caro Online!!!</h3>
         <input type="text" id="login-username" placeholder="Your Name" />
-        <button id="login-btn" type="button">Login</button>
+        <div class="auth-form-button">
+          <button id="login-btn" type="submit">Login</button>
+        </div>
       </form>
+      <div class="auth-container-img">
+        <img src="./background-image.png" alt="Logo" />
+      </div>
     </div>
 
     <button id="sidebar-toggle" style="display: none">☰</button>
@@ -605,7 +673,7 @@
         // Event Listeners Setup
         function setupEventListeners() {
           // Button events
-          elements.loginBtn.addEventListener("click", login);
+          elements.loginForm.addEventListener("submit", login);
           elements.btnLogout.addEventListener("click", logout);
           elements.sidebarToggle.addEventListener("click", toggleSidebar);
           elements.onlineUsersToggle.addEventListener(
@@ -1319,7 +1387,8 @@
         }
 
         // Authentication Functions
-        async function login() {
+        async function login(e) {
+          e.preventDefault();
           const username = elements.loginUsername.value;
           // Show a success toast
           if (!username) return;
