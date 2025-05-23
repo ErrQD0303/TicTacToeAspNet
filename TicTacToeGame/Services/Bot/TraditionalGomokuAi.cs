@@ -28,7 +28,7 @@ public class TraditionalGomokuAI
     private static readonly ListStonePattern ListStoneForPlayer2 = ListStonePattern.Create(false);
 
     // Zobrist hashing components
-    private static ConcurrentDictionary<string, ulong[,]> CachedZobristTable { get; set; } = default!;
+    private Dictionary<string, ulong[,]> CachedZobristTable { get; set; } = default!;
     private ulong[,] zobristTable = default!;
     private ulong zobristHash;
     private readonly Dictionary<ulong, TranspositionEntry> transpositionTable = new();
@@ -40,11 +40,6 @@ public class TraditionalGomokuAI
         (1, 1),   // Diagonal
         (1, -1)   // Anti-diagonal
     };
-
-    static TraditionalGomokuAI()
-    {
-        CachedZobristTable = new ConcurrentDictionary<string, ulong[,]>();
-    }
 
     public TraditionalGomokuAI(int[,] board, int player, bool bothSidesBlock = false)
     {
