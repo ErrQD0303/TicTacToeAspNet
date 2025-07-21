@@ -540,8 +540,7 @@
           isLocalhost: ["localhost", "127.0.0.1"].includes(location.hostname),
           backendUrl: {
             local: "https://localhost:8090",
-            remote:
-              "https://tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net",
+            remote: "http://192.168.1.50:30080",
           },
           getBackendUrl() {
             return this.isLocalhost

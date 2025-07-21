@@ -1,0 +1,38 @@
+# Tic Tac Toe Game Deployment Configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tictactoe-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tictactoe
+  template:
+    metadata:
+      labels:
+        app: tictactoe
+    spec:
+      containers:
+        - name: tictactoe
+          image: datvipcrvn/tic-tac-toe-game:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+              name: tictactoe-env
+---
+# Service Configuration for Tic Tac Toe Game
+apiVersion: v1
+kind: Service
+metadata:
+  name: tictactoe-service
+spec:
+  selector:
+    # Select pods with the label app: tictactoe, which is the above replica set in the deployment configuration
+    app: tictactoe
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 8080
+  type: ClusterIP

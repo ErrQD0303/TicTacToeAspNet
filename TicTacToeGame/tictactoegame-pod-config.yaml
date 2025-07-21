@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tictactoe-pod
+  labels:
+    app: tictactoe
+spec:
+  containers:
+    - name: tictactoe
+      image: datvipcrvn/tic-tac-toe-game:latest
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 8080
+      envFrom:
+        - configMapRef:
+            name: tictactoe-env
