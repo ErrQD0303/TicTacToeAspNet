@@ -4,6 +4,11 @@ using DotNetEnv;
 
 Env.Load();
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseKestrel(options =>
+{
+    var kestrelSection = builder.Configuration.GetSection("Kestrel");
+    options.Configure(kestrelSection);
+});
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.
