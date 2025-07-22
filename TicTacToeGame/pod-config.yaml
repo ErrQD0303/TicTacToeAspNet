@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tictactoe-pod
+  labels:
+    # Use this label to match the service selector
+    app: tictactoe
+spec:
+  containers:
+    - name: tictactoe
+      # image: datvipcrvn/tic-tac-toe-game:latest
+      # For local registry, we will use the image from the local registry
+      image: localhost:5001/tic-tac-toe-game:latest
+      ports:
+        # expose the port 8080 to the outside
+        - containerPort: 8080
+      envFrom:
+        - configMapRef:
+            name: tictactoe-env
