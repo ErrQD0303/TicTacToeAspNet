@@ -1,5 +1,5 @@
 data "azurerm_resource_group" "rg" {
-  name = var.RESOURCE_GROUP_NAME
+  name = var.WEBAPP_RESOURCE_GROUP_NAME
 }
 
 resource "azurerm_service_plan" "asp" {
