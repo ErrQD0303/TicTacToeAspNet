@@ -42,7 +42,13 @@
     terraform apply --auto-approve
    ```
 
-6. Destroy the infrastructure when you are done:
+6. Upload the frontend files from 'wwwroot' folder to the storage account's $web container. You can do this using Azure Storage Explorer or Azure CLI.
+
+   ```bash
+   source scripts/upload-frontend.sh
+   ```
+
+7. Destroy the infrastructure when you are done:
 
    ```bash
     terraform destroy --auto-approve

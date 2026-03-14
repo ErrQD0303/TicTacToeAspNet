@@ -60,13 +60,13 @@ variable "WEBAPP_RESOURCE_GROUP_NAME" {
   }
 }
 
-variable "CORS_ORIGIN" {
-  description = "The allowed origins for CORS configuration in the Web App."
-  type        = string
-  default     = ""
+# variable "CORS_ORIGIN" {
+#   description = "The allowed origins for CORS configuration in the Web App."
+#   type        = string
+#   default     = ""
 
-  validation {
-    condition     = var.CORS_ORIGIN != null || var.CORS_ORIGIN != ""
-    error_message = "CORS_ORIGIN cannot be null or empty. Please provide valid CORS origins."
-  }
-}
+#   validation {
+#     condition     = var.CORS_ORIGIN != null || var.CORS_ORIGIN != ""
+#     error_message = "CORS_ORIGIN cannot be null or empty. Please provide valid CORS origins."
+#   }
+# }

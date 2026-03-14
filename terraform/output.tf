@@ -27,3 +27,8 @@ output "webapp_resource_group_name" {
   value       = var.WEBAPP_RESOURCE_GROUP_NAME
   description = "Web App Resource Group Name"
 }
+
+output "static_website_endpoint" {
+  value       = azurerm_storage_account.frontend.primary_web_endpoint
+  description = "Static Website Endpoint for the Storage Account"
+}
