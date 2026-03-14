@@ -421,5 +421,3 @@ terraform/service_principal.json
 >>>>>>> 75a20be (Add Terraform IaC Folder)
 =======
 **/.terraform/
-terraform/service-principal.json
->>>>>>> e9530eb (remove service-principal.json)
