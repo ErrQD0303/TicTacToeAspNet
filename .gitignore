@@ -412,5 +412,9 @@ terraform.tfvars
 **/.terraform.lock.hcl
 **/terraform.tfstate
 **/terraform.tfvars
+<<<<<<< HEAD
 **/.terraform/
 terraform/service_principal.json
+=======
+**/.terraform/
+>>>>>>> 75a20be (Add Terraform IaC Folder)
