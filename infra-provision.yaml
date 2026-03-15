@@ -95,6 +95,10 @@ stages:
               buildType: "current"
               artifactName: "terraform_plan"
               targetPath: "$(Pipeline.Workspace)"
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: "latest"
           - task: TerraformTask@5
             displayName: "tf init"
             inputs:
