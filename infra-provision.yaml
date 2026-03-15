@@ -17,7 +17,7 @@ stages:
       - job: Plan_Infrastructure
         displayName: "Prepare Infrastructure"
         pool:
-          name: "Default"
+          image: "ubuntu-latest"
         steps:
           - checkout: self
             clean: true
@@ -85,7 +85,7 @@ stages:
       - job: Apply_Infrastructure
         displayName: "Apply Terraform Plan"
         pool:
-          name: "Default"
+          image: "ubuntu-latest"
         steps:
           - checkout: self
             clean: true
@@ -125,7 +125,7 @@ stages:
       - job: Upload_Frontend_Files
         displayName: "Upload Frontend Files to Storage Account"
         pool:
-          name: "Default"
+          image: "ubuntu-latest"
         steps:
           - checkout: self
             clean: true
