@@ -6,18 +6,17 @@ trigger:
     include:
       - "terraform/**"
 
-pool:
-  name: "Default"
-
 variables:
   - group: infra-provision-pipeline-vars-group
 
 stages:
   - stage: Plan
-    displayName: "Prepare Infrastructure"
+    displayName: "Stage 1: Plan Infrastructure"
     jobs:
       - job: Plan_Infrastructure
         displayName: "Prepare Infrastructure"
+        pool:
+          name: "Default"
         steps:
           - checkout: self
             clean: true
@@ -56,3 +55,17 @@ stages:
               workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
               commandOptions: "-out $(Build.SourcesDirectory)/tfplanfile"
               environmentServiceNameAzureRM: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+
+  - stage: Approval
+    displayName: "Stage 2: Manual approval"
+    jobs:
+      - job: Wait_For_Validation
+        displayName: "Wait for external validation"
+        pool: server
+        timeoutInMinutes: 4320 # 4 days
+        steps:
+          - task: ManualValidation@1
+            inputs:
+              notifyUsers: "datvipcrvn3396@gmail.com,quocdat3396@gmail.com"
+              approvers: "datvipcrvn3396@gmail.com"
+              instructions: "Please review the Terraform Plan output in Stage 1. Click Resume to apply the infrastructure changes."
