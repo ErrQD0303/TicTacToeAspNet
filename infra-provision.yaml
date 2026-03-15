@@ -115,6 +115,6 @@ stages:
             inputs:
               provider: "azurerm"
               command: "apply"
-              workingDirectory: "$(Pipeline.Workspace)/terraform_plan/tfplanfile"
-              commandOptions: "--auto-approve"
+              workingDirectory: "$(Pipeline.Workspace)/terraform_plan"
+              commandOptions: "tfplanfile --auto-approve"
               environmentServiceNameAzureRM: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
