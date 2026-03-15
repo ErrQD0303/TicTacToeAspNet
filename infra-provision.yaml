@@ -1,0 +1,143 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - "terraform/**"
+      - "infra-provision.yaml"
+
+variables:
+  - group: infra-provision-pipeline-vars-group
+
+stages:
+  - stage: Plan
+    displayName: "Stage 1: Plan Infrastructure"
+    jobs:
+      - job: Plan_Infrastructure
+        displayName: "Prepare Infrastructure"
+        pool:
+          name: "Default"
+        steps:
+          - checkout: self
+            clean: true
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: "latest"
+          - task: TerraformTask@5
+            displayName: "tf init"
+            inputs:
+              provider: "azurerm"
+              command: "init"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              backendServiceArm: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+              backendAzureRmResourceGroupName: "nqd-backend-rg"
+              backendAzureRmStorageAccountName: "nqdtfstatesa"
+              backendAzureRmContainerName: "tictactoe-tfstate"
+              backendAzureRmKey: $(TF_VAR_ENVIRONMENT).tfstate
+          - task: TerraformTask@5
+            displayName: "tf validate"
+            inputs:
+              provider: "azurerm"
+              command: "validate"
+          - task: TerraformTask@5
+            displayName: "tf fmt"
+            inputs:
+              provider: "azurerm"
+              command: "custom"
+              outputTo: "console"
+              customCommand: "fmt"
+              environmentServiceNameAzureRM: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+          - task: TerraformTask@5
+            displayName: "tf plan"
+            inputs:
+              provider: "azurerm"
+              command: "plan"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              commandOptions: "-out $(Build.ArtifactStagingDirectory)/tfplanfile"
+              environmentServiceNameAzureRM: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+          - task: PublishPipelineArtifact@1
+            displayName: "Publish Terraform Plan Artifact"
+            inputs:
+              targetPath: "$(Build.ArtifactStagingDirectory)/tfplanfile"
+              artifact: "terraform_plan"
+              publishLocation: "pipeline"
+
+  - stage: Approval
+    displayName: "Stage 2: Manual approval"
+    dependsOn: Plan
+    jobs:
+      - job: Wait_For_Validation
+        displayName: "Wait for external validation"
+        pool: server
+        timeoutInMinutes: 4320 # 4 days
+        steps:
+          - task: ManualValidation@1
+            inputs:
+              notifyUsers: "datvipcrvn3396@gmail.com,quocdat3396@gmail.com"
+              approvers: "datvipcrvn3396@gmail.com"
+              instructions: "Please review the Terraform Plan output in Stage 1. Click Resume to apply the infrastructure changes."
+  - stage: Apply
+    displayName: "Stage 3: Apply Infrastructure"
+    dependsOn: Approval
+    jobs:
+      - job: Apply_Infrastructure
+        displayName: "Apply Terraform Plan"
+        pool:
+          name: "Default"
+        steps:
+          - checkout: self
+            clean: true
+
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: "current"
+              artifactName: "terraform_plan"
+              targetPath: "$(Pipeline.Workspace)"
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: "latest"
+          - task: TerraformTask@5
+            displayName: "tf init"
+            inputs:
+              provider: "azurerm"
+              command: "init"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              backendServiceArm: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+              backendAzureRmResourceGroupName: "nqd-backend-rg"
+              backendAzureRmStorageAccountName: "nqdtfstatesa"
+              backendAzureRmContainerName: "tictactoe-tfstate"
+              backendAzureRmKey: $(TF_VAR_ENVIRONMENT).tfstate
+          - task: TerraformTask@5
+            displayName: "tf apply"
+            inputs:
+              provider: "azurerm"
+              command: "apply"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              commandOptions: "$(Pipeline.Workspace)/tfplanfile"
+              environmentServiceNameAzureRM: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+  - stage: Upload_Frontend_Files
+    displayName: "Upload Frontend Files"
+    dependsOn: Apply
+    jobs:
+      - job: Upload_Frontend_Files
+        displayName: "Upload Frontend Files to Storage Account"
+        pool:
+          name: "Default"
+        steps:
+          - checkout: self
+            clean: true
+
+          - task: Bash@3
+            displayName: "Upload Frontend Files"
+            inputs:
+              targetType: "inline"
+              script: |
+                SCRIPT_FILE=terraform/scripts/upload-frontend.sh
+
+                chmod +x $SCRIPT_FILE
+
+                $SCRIPT_FILE $(TF_VAR_ENVIRONMENT) TicTacToeGame/wwwroot
+              workingDirectory: "$(System.DefaultWorkingDirectory)"

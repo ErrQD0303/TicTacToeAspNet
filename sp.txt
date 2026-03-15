@@ -1,0 +1,102 @@
+Name                                                                                          ClientID
+--------------------------------------------------------------------------------------------  ------------------------------------
+Azure SQL Database Backup To Azure Backup Vault                                               e4ab13ed-33cb-41b4-9140-6e264582cf85
+appservice3396                                                                                333d284c-f7bb-40a1-adb7-5b3703422f17
+Azure SRE Agent                                                                               59f0a04a-b322-4310-adc9-39ac41e9631e
+CosmosDB-Garnet-Cache                                                                         e9c3020c-b976-40a7-b6c2-0d56abaa82f8
+Log Analytics API                                                                             ca7f3f0b-7d91-482c-8e09-c5d840d0eac5
+Meru19 MySQL First Party App                                                                  e6f9f783-1fdb-4755-acaf-abed6c642885
+Azure CosmosDB for PostgreSQL Microsoft EntraId                                               ecafc2d9-cf1a-49a7-b60f-e44e34a988d2
+Azure Graph                                                                                   dbcbd02a-d7c4-42fb-8c27-b07e5118b848
+Marketplace Caps API                                                                          184909ca-69f1-4368-a6a7-c558ee6eb0bd
+MS-PIM                                                                                        01fc33a7-78ba-4d2f-a4b7-768e336e890e
+Microsoft Approval Management                                                                 65d91a3d-ab74-42e6-8a2f-0add61688c74
+Azure Managed HSM RP                                                                          1341df96-0b28-43da-ba24-7a6ce39be816
+MicrosoftAzureRedisCache                                                                      96231a05-34ce-4eb4-aa6a-70759cbb5e83
+Azure Static Web Apps                                                                         a7d8f84e-510b-46d6-8f59-77e581db63bc
+Azure Container Instance Service                                                              6bb8e274-af5d-4df2-98a3-4fd78b4cafd9
+Microsoft App Access Panel                                                                    0000000c-0000-0000-c000-000000000000
+Microsoft Azure Legion                                                                        55ebbb62-3b9c-49fd-9b87-9595226dd4ac
+AzureBackup_WBCM_Service                                                                      c505e273-0ba0-47e7-a0bd-f48042b4524d
+Azure Iot Hub                                                                                 89d10474-74af-4874-99a7-c23c2f643083
+Azure ContainerApps Sessions                                                                  2c7dd73f-7a21-485b-b97d-a2508fa152c3
+Bot Framework Composer                                                                        ce48853e-0605-4f77-8746-d70ac63cc6bc
+Microsoft Azure AD Identity Protection                                                        a3dfc3c6-2c7d-4f42-aeec-b2877f9bce97
+Azure Database for PostgreSQL Marlin                                                          5ed8fe41-c1bc-4c06-a531-d91e1f1c2fac
+PowerApps Service                                                                             475226c6-020e-4fb2-8a90-7a972cbfc1d4
+EventGrid Data API                                                                            823c0a78-5de0-4445-a7f5-c2f42d7dc89b
+Microsoft Sentinel Situational Awareness Workspace Access                                     949eebbd-6fe4-4eb5-a25e-a9bf12d6b96e
+AzureAutomation                                                                               fc75330b-179d-49af-87dd-3b1acf6827fa
+Azure Machine Learning Services Asset Notification                                            b8cf62f3-7cc7-4e32-ab3a-41370ef0cfcf
+Azure Spring Cloud Service Runtime Auth                                                       366cbfa5-46b3-47fb-9d70-55fb923b4833
+Azure SQL Managed Instance to Azure AD Resource Provider                                      9c8b80bc-6887-42d0-b1af-d0c40f9bf1fa
+Dynamic Alerts                                                                                707be275-6b9d-4ee7-88f9-c0c2bd646e0f
+datvipcrvn3396-DevOpsPracticeOrganization-Day11-AKS-98b657d5-0161-4b3b-b2c6-db8a80acaf87      fec4f394-f1d6-40c8-9264-880eb2f0b057
+SubscriptionRP                                                                                e3335adb-5ca0-40dc-b8d3-bedc094e523b
+Microsoft Remote Desktop                                                                      a4a365df-50f1-4397-bc59-1a1564b8bb9c
+Microsoft Defender for APIs Resource Provider                                                 56823b05-67d8-413a-b6ab-ad19d7710cf2
+Defender for Cloud - Private Link Resource Provider                                           d0ef82bb-244a-4458-9eb4-24a9f093f2c4
+Azure Iot Hub Publisher App                                                                   29f411f1-b2cf-4043-8ac8-2185d7316811
+Azure App Configuration                                                                       35ffadb3-7fc1-497e-b61b-381d28e744cc
+Microsoft Defender for Identity                                                               60ca1954-583c-4d1f-86de-39d835f3e452
+Azure HDInsight on AKS Client                                                                 a6943a7f-5ba0-4a34-bf91-ab439efdda3f
+Microsoft Defender for Cloud MultiCloud Onboarding                                            81172f0f-5d81-47c7-96f6-49c58b60d192
+datvipcrvn3396-DevOpsPracticeOrganizat-qrapp_serverless-c0bb96f6-3c3e-42b1-bc19-08f439e8bc89  0efc16a0-e073-4661-8281-eb274041954c
+Azure DNS                                                                                     19947cfd-0303-466c-ac3c-fcc19a7a1570
+GatewayRP                                                                                     486c78bf-a0f7-45f1-92fd-37215929e116
+Microsoft Invitation Acceptance Portal                                                        4660504c-45b3-4674-a709-71951a6b0763
+Azure Resource Manager                                                                        797f4846-ba00-4fd7-ba43-dac1f8f63013
+Azure CosmosDB for PostgreSQL AAD Authentication                                              b4fa09d8-5da5-4352-83d9-05c2a44cf431
+AzureDatabricks                                                                               2ff814a6-3304-4ab8-85cb-cd0e6f879c1d
+Power BI Premium                                                                              cb4dc29f-0bf4-402a-8b30-7511498ed654
+Azure Security Insights Content As Code                                                       11413461-f071-4513-802f-acbb00576ed3
+Azure Container Registry                                                                      6a0ec4d3-30cb-4a83-91c0-ae56bc0e3d26
+Microsoft Threat Protection                                                                   8ee8fdad-f234-4243-8f3b-15c294843740
+Azure Key Vault Managed HSM Key Governance Service                                            a1b76039-a76c-499f-a2dd-846b4cc32627
+Microsoft Azure Container Apps - Control Plane                                                7e3bc4fd-85a3-4192-b177-5b8bfc87f42c
+Diagnostic Services Data Access                                                               3603eff4-9141-41d5-ba8f-02fb3a439cd6
+Azure Storage                                                                                 e406a681-f3d4-42a8-90b6-c2b029497af1
+Metrics Monitor API                                                                           12743ff8-d3de-49d0-a4ce-6c91a4245ea0
+Request Approvals Read Platform                                                               d8c767ef-3e9a-48c4-aef9-562696539b39
+Azure Files                                                                                   69dda2a9-33ca-4ed0-83fb-a9b7b8973ff4
+Backup Management Service                                                                     262044b1-e2ce-469f-a196-69ab7ada62d3
+RPSaaS Meta RP                                                                                f77c2a8f-8a0a-4776-8e0a-bcb2549610ca
+Managed Disks Resource Provider                                                               60e6cd67-9c8c-4951-9b3c-23c25a2169af
+Azure RBAC Data Plane                                                                         5861f7fb-5582-4c1a-83c0-fc5ffdb531a6
+Access IoT Hub Device Provisioning Service                                                    0cd79364-7a90-4354-9984-6e36c841418d
+Azure Service Connector Resource Provider                                                     c4288165-6698-45ba-98a5-48ea7791fed3
+Azure Resource Graph                                                                          509e4652-da8d-478d-a730-e9d4a1996ca4
+Azure Usage Billing                                                                           a76f12f2-5fbe-483e-84b5-8382cccc53e3
+Azure Machine Learning Compute                                                                607ece82-f922-494f-88b8-30effaf12214
+Azure HDInsight Cluster API                                                                   7865c1d2-f040-46cc-875f-831a1ef6a28a
+Azure Storage Discovery Resource Provider                                                     b15f3d14-f6d1-4c0d-93da-d4136c97f006
+Azure Key Vault                                                                               cfa8b339-82a2-471a-a3c9-0fc0be7a4093
+PROD Microsoft Defender For Cloud XDR                                                         3f6aecb4-6dbf-4e45-9141-440abdced562
+Microsoft Azure Vnet Verifier                                                                 6e02f8e9-db9b-4eb5-aa5a-7c8968375f68
+Microsoft Defender for Cloud for AI                                                           1efb1569-5fd6-4938-8b8d-9f3aa07c658d
+Azure SignalR Service Resource Provider                                                       cdad765c-f191-43ba-b9f5-7aef392f811d
+Azure Spring Cloud Marketplace Integration                                                    86adf623-eea3-4453-9f4a-18134ac1410d
+azure-cli-2026-01-06-14-05-21                                                                 6dc00739-0dc5-4cc2-b381-793690aaa499
+Microsoft Azure Container Apps - Data Plane                                                   3734c1a4-2bed-4998-a37a-ff1a9e7bf019
+AzureTerraform                                                                                d99ebd2c-7667-48c7-a145-04212409f9e5
+Azure Device Update RP                                                                        53ddd101-c943-4c8b-ad09-84c09e9d570c
+Azure Management Groups                                                                       f2c304cf-8e7e-4c3f-8164-16299ad9d272
+Azure DNS Managed Resolver                                                                    b4ca0290-4e73-4e31-ade0-c82ecfaabf6a
+Azure ESTS Service                                                                            00000001-0000-0000-c000-000000000000
+Microsoft Defender for Cloud Scanner Resource Provider                                        e0ccf59d-5a20-4a87-a122-f42842cdb86a
+Azure Cosmos DB                                                                               a232010e-820c-4083-83bb-3ace5fc29d0b
+Compute Artifacts Publishing Service                                                          a8b6bf88-1d1a-4626-b040-9a729ea93c65
+Azure Cosmos DB Virtual Network To Network Resource Provider                                  57c0fc58-a83a-41d0-8ae9-08952659bdfd
+Office365 Shell WCSS-Server Default                                                           a68e1e61-ad4f-45b6-897d-0a1ea8786345
+Azure Notification Service                                                                    b503eb83-1222-4dcc-b116-b98ed5216e05
+identity-client-app                                                                           d2ec0a4a-f7af-4651-8f9c-8c60eef41415
+Microsoft.Relay                                                                               91bb937c-29c2-4275-982f-9465f0caf03d
+Microsoft.Azure.SyncFabric                                                                    00000014-0000-0000-c000-000000000000
+Microsoft Defender for Cloud CIEM                                                             a70c8393-7c0c-4c1e-916a-811bd476ee11
+Microsoft Graph                                                                               00000003-0000-0000-c000-000000000000
+Bot Service CMEK Prod                                                                         27a762be-14e7-4f92-899c-151877d6d497
+IAM Supportability                                                                            a57aca87-cbc0-4f3c-8b9e-dc095fdc8978
+Billing RP                                                                                    80dbdb39-4f33-4799-8b6f-711b5e3e61b6
+networkcopilotRP                                                                              d66e9e8e-53a4-420c-866d-5bb39aaea675
+Afdx Resource Provider                                                                        92b61450-2139-4e4a-a0cc-898eced7a779
+Azure Container Registry - Dataplane                                                          a3747411-ce7c-4888-9ddc-3a230786ca19
