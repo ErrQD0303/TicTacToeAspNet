@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - feature/iss-02/Implement-azure-pipelines-yaml-file
+      - main
   paths:
     include:
       - "terraform/**"
