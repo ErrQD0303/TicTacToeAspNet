@@ -1,0 +1,58 @@
+trigger:
+  branches:
+    include:
+      - feature/iss-02/Implement-azure-pipelines-yaml-file
+  paths:
+    include:
+      - "terraform/**"
+
+pool:
+  name: "Default"
+
+variables:
+  - group: infra-provision-pipeline-vars-group
+
+stages:
+  - stage: Plan
+    displayName: "Prepare Infrastructure"
+    jobs:
+      - job: Plan_Infrastructure
+        displayName: "Prepare Infrastructure"
+        steps:
+          - checkout: self
+            clean: true
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: "latest"
+          - task: TerraformTask@5
+            displayName: "tf init"
+            inputs:
+              provider: "azurerm"
+              command: "init"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              backendServiceArm: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+              backendAzureRmResourceGroupName: "nqd-backend-rg"
+              backendAzureRmStorageAccountName: "nqdtfstatesa"
+              backendAzureRmContainerName: "tictactoe-tfstate"
+              backendAzureRmKey: $(TF_VAR_ENVIRONMENT)
+          - task: TerraformTask@5
+            displayName: "tf validate"
+            inputs:
+              provider: "azurerm"
+              command: "validate"
+          - task: TerraformTask@5
+            displayName: "tf fmt"
+            inputs:
+              provider: "azurerm"
+              command: "custom"
+              outputTo: "console"
+              customCommand: "fmt"
+              environmentServiceNameAzureRM: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+          - task: TerraformTask@5
+            displayName: "tf plan"
+            inputs:
+              provider: "azurerm"
+              command: "plan"
+              workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+              commandOptions: "-out $(Build.SourcesDirectory)/tfplanfile"
+              environmentServiceNameAzureRM: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
