@@ -139,6 +139,5 @@ stages:
 
                 chmod +x $SCRIPT_FILE
 
-                $SCRIPT_FILE $(TF_VAR_ENVIRONMENT) 
-                TicTacToeGame/wwwroot
+                $SCRIPT_FILE $(TF_VAR_ENVIRONMENT) TicTacToeGame/wwwroot
               workingDirectory: "$(System.DefaultWorkingDirectory)"
