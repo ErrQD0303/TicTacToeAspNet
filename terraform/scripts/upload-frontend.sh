@@ -1,9 +1,10 @@
 #!/usr/bin/bash
 
-export $(grep -v '^#' .env | xargs)
+ENVIRONMENT=$1
+FRONTEND_PATH=$2
 
 az storage blob upload-batch \
-    --account-name "${TF_VAR_ENVIRONMENT}ticstorage" \
+    --account-name "${ENVIRONMENT}ticstorage" \
     --destination '$web' \
-    --source '../TicTacToeGame/wwwroot' \
+    --source "${FRONTEND_PATH}" \
     --overwrite
