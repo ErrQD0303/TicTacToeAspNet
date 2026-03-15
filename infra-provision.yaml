@@ -118,3 +118,27 @@ stages:
               workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
               commandOptions: "$(Pipeline.Workspace)/tfplanfile"
               environmentServiceNameAzureRM: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+  - stage: Upload_Frontend_Files
+    displayName: "Upload Frontend Files"
+    dependsOn: Apply
+    jobs:
+      - job: Upload_Frontend_Files
+        displayName: "Upload Frontend Files to Storage Account"
+        pool:
+          name: "Default"
+        steps:
+          - checkout: self
+            clean: true
+
+          - task: Bash@3
+            displayName: "Upload Frontend Files"
+            inputs:
+              targetType: "inline"
+              script: |
+                SCRIPT_FILE=terraform/scripts/upload-frontend.sh
+
+                chmod +x $SCRIPT_FILE
+
+                $SCRIPT_FILE $(TF_VAR_ENVIRONMENT) 
+                TicTacToeGame/wwwroot
+              workingDirectory: "$(System.DefaultWorkingDirectory)"
