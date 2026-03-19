@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -288,8 +288,7 @@
           isLocalhost: ["localhost", "127.0.0.1"].includes(location.hostname),
           backendUrl: {
             local: "https://localhost:7194",
-            remote:
-              "https://tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net",
+            remote: "https://prod-tictactoe-web.azurewebsites.net",
           },
           getBackendUrl() {
             return this.isLocalhost
@@ -354,7 +353,7 @@
           elements.sidebarToggle.addEventListener("click", toggleSidebar);
           elements.onlineUsersToggle.addEventListener(
             "click",
-            toggleOnlineUsersSidebar
+            toggleOnlineUsersSidebar,
           );
           elements.btnStartGame.addEventListener("click", findGame);
           elements.btnExitGame.addEventListener("click", exitGame);
@@ -402,7 +401,7 @@
         function resetBoard() {
           gameState.boardSize = parseInt(elements.boardSizeSelect.value);
           gameState.board = Array.from({ length: gameState.boardSize }, () =>
-            Array(gameState.boardSize).fill("")
+            Array(gameState.boardSize).fill(""),
           );
           gameState.gameOver = false;
           updateTitle();
@@ -465,7 +464,7 @@
               gameState.hoverCell.col * CELL_SIZE,
               gameState.hoverCell.row * CELL_SIZE,
               CELL_SIZE,
-              CELL_SIZE
+              CELL_SIZE,
             );
           }
 
@@ -501,7 +500,7 @@
               col * CELL_SIZE,
               row * CELL_SIZE,
               CELL_SIZE,
-              CELL_SIZE
+              CELL_SIZE,
             );
           }
 
@@ -626,11 +625,11 @@
 
           gameState.hoverCell.col = Math.min(
             Math.max(0, Math.floor(x / CELL_SIZE)),
-            gameState.boardSize - 1
+            gameState.boardSize - 1,
           );
           gameState.hoverCell.row = Math.min(
             Math.max(0, Math.floor(y / CELL_SIZE)),
-            gameState.boardSize - 1
+            gameState.boardSize - 1,
           );
         }
 
@@ -688,7 +687,7 @@
             "Restart",
             gameState.currentGameId,
             row,
-            column
+            column,
           );
           elements.status.textContent = "";
         }
@@ -726,12 +725,12 @@
           gameState.connection.on("ReceiveMatchFound", receiveMatchFound);
           gameState.connection.on(
             "ReceiveUserAlreadyInAMatch",
-            receiveUserAlreadyInAMatch
+            receiveUserAlreadyInAMatch,
           );
           gameState.connection.on("ReceiveMatchRestart", receiveMatchRestart);
           gameState.connection.on(
             "ReceiveSetNameSuccess",
-            receiveSetNameSuccess
+            receiveSetNameSuccess,
           );
           gameState.connection.on("DisplayOnlineUsers", displayOnlineUsers);
         }
@@ -795,7 +794,7 @@
             await connection.invoke(
               "FindGame",
               gameState.boardSize,
-              gameState.boardSize
+              gameState.boardSize,
             );
           } catch (err) {
             console.error(err.toString());
@@ -806,7 +805,7 @@
           try {
             await gameState.connection.invoke(
               "ExitMatch",
-              gameState.currentGameId
+              gameState.currentGameId,
             );
             gameState.currentGameId = null;
             elements.status.textContent = "Exited game.";
@@ -826,7 +825,7 @@
             "Restart",
             gameState.currentGameId,
             size,
-            size
+            size,
           );
         }
 
@@ -883,7 +882,7 @@
           await resetGame();
 
           alert(
-            `Match found! You are playing against ${opponent}. Your mark is ${gameState.currentPlayer}`
+            `Match found! You are playing against ${opponent}. Your mark is ${gameState.currentPlayer}`,
           );
           updateButtonVisibility();
           elements.userSidebar.classList.remove("open");
@@ -940,7 +939,7 @@
           try {
             const mark = await gameState.connection.invoke(
               "GetMark",
-              gameState.currentGameId
+              gameState.currentGameId,
             );
             return mark;
           } catch (err) {
@@ -958,7 +957,7 @@
               "SendMove",
               row + "",
               col + "",
-              matchId
+              matchId,
             );
             return true;
           } catch (err) {
@@ -1039,7 +1038,7 @@
             const isSetSuccess = setBoardCell(
               row,
               col,
-              gameState.currentPlayer
+              gameState.currentPlayer,
             );
             animateMark(gameState.board[row][col], col, row);
             gameState.previousMark = { row, col };
@@ -1051,7 +1050,7 @@
                 "EndMatch",
                 String(gameState.currentGameId ?? ""),
                 String(winner ?? ""),
-                gameState.board
+                gameState.board,
               );
             }
           }
@@ -1068,7 +1067,7 @@
           if (gameState.connection) {
             await gameState.connection.invoke(
               "Logout",
-              gameState.currentUser?.name
+              gameState.currentUser?.name,
             );
             await gameState.connection.stop();
           }

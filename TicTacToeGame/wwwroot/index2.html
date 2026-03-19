@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -342,7 +342,7 @@
         }
         const backendUrl = isLocalhost
           ? "https://localhost:7194"
-          : "https://tictactoe-dat-b5b2ftf8hmhkcva4.southeastasia-01.azurewebsites.net";
+          : "https://https://prod-tictactoe-web.azurewebsites.net";
         let currentUser = null;
         let token = null; // Store the token here
         let previousMark = {
@@ -401,7 +401,7 @@
                 method: "GET",
                 headers: {},
                 credentials: "include",
-              }
+              },
             );
             if (response.ok) {
               const responseBody = await response.json();
@@ -454,7 +454,7 @@
           const userSidebar = document.getElementById("user-sidebar");
           const toggleBtn = document.getElementById("sidebar-toggle");
           const onlineUsersToggle = document.getElementById(
-            "online-users-toggle"
+            "online-users-toggle",
           );
 
           if (token) {
@@ -489,7 +489,7 @@
         // If you want it to scale to the screen (responsive):
 
         let board = Array.from({ length: boardSize }, () =>
-          Array(boardSize).fill("")
+          Array(boardSize).fill(""),
         );
         let lock = false;
         // let currentPlayer = "X";
@@ -562,15 +562,14 @@
           // Clear the current game state
           boardSize = parseInt(document.getElementById("board-size").value); // Get the new board size from the select element
           board = Array.from({ length: boardSize }, () =>
-            Array(boardSize).fill("")
+            Array(boardSize).fill(""),
           );
           gameOver = false;
           currentPlayer = await GetMark();
 
           // Update the title
-          document.title = document.getElementById(
-            "app-header"
-          ).textContent = `Caro (${boardSize}x${boardSize})`;
+          document.title = document.getElementById("app-header").textContent =
+            `Caro (${boardSize}x${boardSize})`;
 
           // Resize the canvas
           resizeCanvas();
@@ -629,7 +628,7 @@
               hoverCell.col * CELL_SIZE,
               hoverCell.row * CELL_SIZE,
               CELL_SIZE,
-              CELL_SIZE
+              CELL_SIZE,
             );
           }
 
@@ -663,7 +662,7 @@
               col * CELL_SIZE,
               row * CELL_SIZE,
               CELL_SIZE,
-              CELL_SIZE
+              CELL_SIZE,
             );
           }
 
@@ -870,11 +869,11 @@
 
           hoverCell.col = Math.min(
             Math.max(0, Math.floor(x / CELL_SIZE)),
-            boardSize - 1
+            boardSize - 1,
           );
           hoverCell.row = Math.min(
             Math.max(0, Math.floor(y / CELL_SIZE)),
-            boardSize - 1
+            boardSize - 1,
           );
         }
 
@@ -913,7 +912,7 @@
             cacheConnection.on("ReceiveMatchFound", ReceiveMatchFound);
             cacheConnection.on(
               "ReceiveUserAlreadyInAMatch",
-              ReceiveUserAlreadyInAMatch
+              ReceiveUserAlreadyInAMatch,
             );
             cacheConnection.on("ReceiveMatchRestart", ReceiveMatchRestart);
             cacheConnection.on("ReceiveSetNameSuccess", ReceiveSetNameSuccess); // Listen to SetName success event
@@ -1032,7 +1031,7 @@
             "Match found! You are playing against " +
               opponent +
               ". Your mark is " +
-              currentPlayer
+              currentPlayer,
           );
           document.getElementById("btn-start-game").style.display = "none"; // Hide the start game button
           document.getElementById("btn-exit-game").style.display = "block"; // Show the exit game button
@@ -1097,7 +1096,7 @@
                 "EndMatch",
                 String(currentGameId ?? ""),
                 String(winner ?? ""),
-                board
+                board,
               ); // Send end match request to server
             }
           }
