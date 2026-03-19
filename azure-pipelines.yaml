@@ -1,0 +1,30 @@
+trigger:
+  branches:
+    include:
+      - master
+  paths:
+    include:
+      - "TicTacToeGame/**"
+
+variables:
+  - group: infra-provision-pipeline-vars-group
+
+stages:
+  - stage: Deploy
+    displayName: "Deploy Application"
+    jobs:
+      - job: Deploy_Backend
+        displayName: "Deploy Backend"
+        pool:
+          image: "ubuntu-latest"
+        steps:
+          - checkout: self
+            clean: "true"
+
+      - job: Deploy_Frontend
+        displayName: "Deploy Frontend"
+        pool:
+          image: "ubuntu-latest"
+        steps:
+          - checkout: self
+            clean: "true"
