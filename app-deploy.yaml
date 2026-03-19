@@ -1,0 +1,47 @@
+trigger:
+  branches:
+    include:
+      - master
+  paths:
+    include:
+      - "TicTacToeGame/**"
+
+variables:
+  - group: infra-provision-pipeline-vars-group
+
+stages:
+  - stage: Deploy
+    displayName: "Deploy Application"
+    jobs:
+      - job: Deploy_Backend
+        displayName: "Deploy Backend"
+        pool:
+          name: "Default"
+        steps:
+          - checkout: self
+            clean: "true"
+          - task: AzureWebAppContainer@1
+            displayName: "Deploy Backend"
+            inputs:
+              azureSubscription: "Azure for Students(d5fa5814-3523-4357-85f6-0d0be412b089)"
+              appName: "$(TF_VAR_ENVIRONMENT)-tictactoe-web"
+              containers: "datvipcrvn/tic-tac-toe-game:latest"
+
+      - job: Deploy_Frontend
+        displayName: "Deploy Frontend"
+        pool:
+          name: "Default"
+        steps:
+          - checkout: self
+            clean: "true"
+          - task: Bash@3
+            displayName: "Upload Frontend Files"
+            inputs:
+              targetType: "inline"
+              script: |
+                SCRIPT_FILE=terraform/scripts/upload-frontend.sh
+
+                chmod +x $SCRIPT_FILE
+
+                $SCRIPT_FILE $(TF_VAR_ENVIRONMENT) TicTacToeGame/wwwroot
+              workingDirectory: "$(System.DefaultWorkingDirectory)"
